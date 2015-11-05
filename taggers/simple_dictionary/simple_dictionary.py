@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # This file is part of RH_NNTagging <http://github.com/ufal/rh_nntagging/>.
 #
 # Copyright 2015 Institute of Formal and Applied Linguistics, Faculty of
