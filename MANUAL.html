@@ -14,7 +14,11 @@
 <p></p>
 
   <ol>
-  <li><a href="#toc1">Python conllu.py module</a>
+  <li><a href="#toc1">Taggers</a>
+  </li>
+  <li><a href="#toc2">Tagger running scripts</a>
+  </li>
+  <li><a href="#toc3">Python conllu.py module</a>
   </li>
   </ol>
 
@@ -22,12 +26,104 @@
 <hr>
 <p></p>
 <a id="toc1" name="toc1"></a>
-<h1>1. Python conllu.py module</h1>
+<h1>1. Taggers</h1>
+
+<p style="margin-bottom:0">
+The individual taggers should be placed in subdirectories of the <code>taggers</code>
+directory. Taggers can be arbitrary executables, fulfilling the following:
+</p>
+<ul style="margin-top:0">
+<li>taggers must handle multiple training data (by concatenating them)
+</li>
+<li>files with training data are passed as last arguments of the command line
+</li>
+<li>testing data are read from standard input and the annotated results
+  are printed on standard output
+</li>
+</ul>
+
+<p>
+The <code>taggers/simple_dictionary</code> contains a trivial baseline tagger which uses
+for each form the most frequent POS tags from the training data.
+</p>
+
+<a id="toc2" name="toc2"></a>
+<h1>2. Tagger running scripts</h1>
+
+<p>
+A tagger can be executed (and optionally evaluated) using the
+<code>scripts/run_all.sh</code> script. This script can execute multiple tagger
+configurations on same training and testing data, and optinally evaluate
+the reaults. Every configuration can be executed either locally, or on
+grid using <code>qsub</code>.
+</p>
+<p style="margin-bottom:0">
+The <code>scripts/run_all.sh</code> has following usage:
+</p>
+<pre style="margin-top:0">
+  run_all.sh [options] tagger_command_line [tagger_command_line ...]
+  Options: -t tagger_name
+           -n experiment_name
+           -d training_data_file
+           -e testing_data_file
+           -g
+</pre>
+
+<p>
+The <code>-t tagger_name</code> option is mandatory and it specifies a subdirectory of
+<code>taggers</code> directory containing the tagger to be used.
+</p>
+<p>
+The <code>-n experiment_name</code> option is also mandatory. All outputs of the tagger
+are stored in a subdirectory <code>exp-experiment_name</code> of the
+<code>taggers/tagger_name</code> directory.
+</p>
+<p>
+The <code>-d training_data_file</code> option is optional and can be specified multiple
+times. It specifies training data relative to the <code>data</code> subdirectory of the repo.
+All training files are appended to the command line of the tagger command.
+</p>
+<p>
+The <code>-e testing_data_file</code> option is optional and can be specified multiple
+times. If specifies testing data relative to the <code>data</code> subdirectory of the repo.
+If used, the specified testing data are cleared (gold annotations removed), fed
+to the standard input of the tagger command, and the standard output of the
+tagger command is then evaluated against the gold annotations from the testing data.
+The evaluation is performed for every testing file separately and written
+to standard output.
+</p>
+<p>
+If <code>-g</code> is specified, each tagger command is evaluated on the grid using <code>qsub</code>.
+</p>
+<p>
+All remaining arguments are interpreted as tagger command lines -- each argument
+is one command to execute. For every command line, files containing standard
+output and standard error are created in the experiment subdirectory (using names
+derived from the tagger command line). Every tagger command is executed in the
+tagger directory (i.e., <code>taggers/tagger_name</code> directory of the repo) and the
+<code>conllu.py</code> module (described later) is in Python library path.
+</p>
+<p style="margin-bottom:0">
+<i>Example:</i> To traing <code>simple_dictonary.py</code> tagger on English, evaluate results on development data and store the results in <code>exp-en-dev</code> directory, run
+</p>
+<pre style="margin-top:0">
+  scripts/run_all.sh -t simple_dictionary -n en-dev -dud-1.1/en/en-ud-train.conllu -eud-1.1/en/en-ud-dev.conllu simple_dictionary.py
+</pre>
+
+<p style="margin-bottom:0">
+<i>Example:</i> To train <code>simple_dictonary.py</code> tagger on all Czech training data (there are four), evaluate results on both development and testing data and store the results in <code>exp-cs</code> directory, using our cluster, run
+</p>
+<pre style="margin-top:0">
+  scripts/run_all.sh -g -t simple_dictionary -n cs -dud-1.1/cs/cs-ud-train-{c,l,m,v}.conllu -eud-1.1/cs/cs-ud-{dev,test}.conllu simple_dictionary.py
+</pre>
+
+<a id="toc3" name="toc3"></a>
+<h1>3. Python conllu.py module</h1>
 
 <p>
 Python module <code>conllu.py</code> provides methods for loading and saving CoNLL-U files.
 The module is located in <code>lib</code> subdirectory, which is added to <code>PYTHONPATH</code>
-automatically when running a tagger using the <code>scripts/run_tagger.sh</code> script.
+automatically when running a tagger using the <code>scripts/run_all.sh</code> script.
 </p>
 <p>
 The <code>conllu.py</code> module provides the following classes:
