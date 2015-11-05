@@ -32,9 +32,9 @@ grid=""
 while getopts "n:t:d:e:g" opt; do
   case $opt in
     t) [ -z "$tagger" ] || usage "The tagger name was specified multiple times"
-       tagger="-t$OPTARG";;
+       tagger="$OPTARG";;
     n) [ -z "$experiment" ] || usage "The experiment name was specified multiple times"
-       experiment="-n$OPTARG";;
+       experiment="$OPTARG";;
     d) training+=("-d$OPTARG");;
     e) testing+=("-e$OPTARG");;
     g) grid="1";;
@@ -46,10 +46,20 @@ shift $((OPTIND-1))
 [ -z "$tagger" ] && usage "No tagger name was given"
 [ -z "$experiment" ] && usage "No experiment name was given"
 
+[ -d "$dir/../taggers/$tagger" ] || { echo "The given tagger does not exist in taggers directory!" >&2; exit 1; }
+mkdir -p "$dir/../taggers/$tagger/exp-$experiment"
+
 for command_line in "$@"; do
+  description="${command_line// /}"
+  description="${description//\//}"
+  description="${description//,/}"
+  log="$dir/../taggers/$tagger/exp-$experiment/$description"
+
   if [ -z "$grid" ]; then
-    "$dir"/run_tagger.sh "$tagger" "$experiment" "${training[@]}" "${testing[@]}" $command_line
+    "$dir"/run_tagger.sh -t"$tagger" -n"$experiment" "${training[@]}" "${testing[@]}" $command_line >"$log".out 2>"$log".err
   else
-    qsub $SGE_ARGS -N "${tagger#-t}_${experiment#-e}" -b y -cwd "$dir"/run_tagger.sh "$tagger" "$experiment" "${training[@]}" "${testing[@]}" $command_line
+    >"$log".out
+    >"$log".err
+    qsub $SGE_ARGS -N "${tagger}_exp-${experiment}" -o "$log".out -e "$log".err -b y -cwd "$dir"/run_tagger.sh -t"$tagger" -n"$experiment" "${training[@]}" "${testing[@]}" $command_line
   fi
 done

@@ -46,13 +46,9 @@ shift $((OPTIND-1))
 [ -d "$dir/../taggers/$tagger" ] || { echo "The given tagger does not exist in taggers directory!" >&2; exit 1; }
 
 cd "$dir/../taggers/$tagger"
-mkdir -p exp-"$experiment"
 
-description="$*"
-description="${description// /}"
-description="${description//\//}"
 if [ -z "${testing[0]}" ]; then
-  PATH=.:"$PATH" PYTHONPATH=../../lib:"$PYTHONPATH" "$@" "${training[@]}" >exp-"$experiment/$description".out 2>exp-"$experiment/$description".err
+  PATH=.:"$PATH" PYTHONPATH=../../lib:"$PYTHONPATH" "$@" "${training[@]}"
 else
-  (PYTHONPATH=../../lib:"$PYTHONPATH" ../../scripts/prepare_for_test.py "${testing[@]}" | PATH=.:"$PATH" PYTHONPATH=../../lib:"$PYTHONPATH" "$@" "${training[@]}" | PYTHONPATH=../../lib:"$PYTHONPATH" ../../scripts/eval.py "${testing[@]}") >exp-"$experiment/$description".out 2>exp-"$experiment/$description".err
+  PYTHONPATH=../../lib:"$PYTHONPATH" ../../scripts/prepare_for_test.py "${testing[@]}" | PATH=.:"$PATH" PYTHONPATH=../../lib:"$PYTHONPATH" "$@" "${training[@]}" | PYTHONPATH=../../lib:"$PYTHONPATH" ../../scripts/eval.py "${testing[@]}"
 fi
