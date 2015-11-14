@@ -38,12 +38,16 @@ class reader:
     def close(self):
         self.handle.close()
 
+    def __iter__(self):
+        sentence = []
+
+        while self.next_sentence(sentence):
+            yield sentence
+
     def next_sentence(self, sentence):
         import re
 
-        # Clear given sentence
-        while sentence:
-            sentence.pop()
+        del sentence[:]
 
         while True:
             line = self.handle.readline()
