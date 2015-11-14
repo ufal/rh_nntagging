@@ -8,18 +8,34 @@ from vocab import Vocab
 
 
 class TaggingDataset(object):
+    """Holds a dataset for tagging."""
     def __init__(self, seqs, vocab, label_vocab):
+        """Initialize new dataset.
+
+        Args:
+            seqs: list of (sentence, tags) pairs that contain ids of words and tags
+            vocab: Vocab mapping between words and ids
+            label_vocab: Vocab mapping between tags and ids
+        """
         self.seqs = seqs
         self.vocab = vocab
         self.tags = label_vocab
 
     def get_n_tags(self):
+        """How many tags are there?"""
         return len(self.tags)
 
     def shuffle(self):
+        """Shuffle the order of the sequences."""
         random.shuffle(self.seqs)
 
     def split(self, ratio):
+        """Split the dataset into two datasets given the ratio.
+
+        The first one contains `ratio` percent and the other the remainder.
+        WARNING: The vocabularies are not rebuilt and remain the same.
+        """
+
         pivot = int(ratio * len(self.seqs))
         seqs1 = self.seqs[:pivot]
         seqs2 = self.seqs[pivot:]
@@ -29,6 +45,11 @@ class TaggingDataset(object):
         return d1, d2
 
     def prepare_batches(self, n_seqs_per_batch=-1):
+        """Return a list of minibatches created out of the dataset.
+
+        Args:
+            n_seqs_per_batch: how many sequences should each minibatch contain?
+        """
         res = []
 
         if n_seqs_per_batch == -1:
@@ -42,6 +63,7 @@ class TaggingDataset(object):
         return res
 
     def _batch_to_numpy(self, batch):
+        """Convert given minibatch to numpy arrays with appropriate padding."""
         max_seq_len = None
         for x, y in batch:
             max_seq_len = max(len(x), max_seq_len)
@@ -57,6 +79,7 @@ class TaggingDataset(object):
 
     @staticmethod
     def load_from_file(fname, vocab=None, tags=None):
+        """Load dataset from the given file."""
         reader = conllu.reader(fname)
 
         learn_tags, learn_vocab, tags, vocab = TaggingDataset.initialize_vocab_and_tags(tags, vocab)
@@ -80,6 +103,7 @@ class TaggingDataset(object):
 
     @staticmethod
     def word_obj_to_str(word):
+        """Stringify the word for purposes of tagging."""
         return word.form
 
     @staticmethod
@@ -95,6 +119,7 @@ class TaggingDataset(object):
             learn_tags = True
         else:
             learn_tags = False
+
         return learn_tags, learn_vocab, tags, vocab
 
     @staticmethod
@@ -121,9 +146,6 @@ def main(fname, split, dont_shuffle, fout1, fout2):
 
     ds1.save_to_file(fout1)
     ds2.save_to_file(fout2)
-
-
-
 
 
 if __name__ == '__main__':
