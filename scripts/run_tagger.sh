@@ -47,8 +47,16 @@ shift $((OPTIND-1))
 
 cd "$dir/../taggers/$tagger"
 
-if [ -z "${testing[0]}" ]; then
-  PATH=.:"$PATH" PYTHONPATH=../../lib:"$PYTHONPATH" "$@" "${training[@]}"
+if [ "${#testing[@]}" -eq 0 ]; then
+  if [ "${#training[@]}" -le 1 ]; then
+    PATH=.:"$PATH" PYTHONPATH=../../lib:"$PYTHONPATH" "$@" "${training[@]}"
+  else
+    PATH=.:"$PATH" PYTHONPATH=../../lib:"$PYTHONPATH" "$@" <(cat "${training[@]}")
+  fi
 else
-  PYTHONPATH=../../lib:"$PYTHONPATH" ../../scripts/prepare_for_test.py "${testing[@]}" | PATH=.:"$PATH" PYTHONPATH=../../lib:"$PYTHONPATH" "$@" "${training[@]}" | PYTHONPATH=../../lib:"$PYTHONPATH" ../../scripts/eval.py "${testing[@]}"
+  if [ "${#training[@]}" -le 1 ]; then
+    PYTHONPATH=../../lib:"$PYTHONPATH" ../../scripts/prepare_for_test.py "${testing[@]}" | PATH=.:"$PATH" PYTHONPATH=../../lib:"$PYTHONPATH" "$@" "${training[@]}" | PYTHONPATH=../../lib:"$PYTHONPATH" ../../scripts/eval.py "${testing[@]}"
+  else
+    PYTHONPATH=../../lib:"$PYTHONPATH" ../../scripts/prepare_for_test.py "${testing[@]}" | PATH=.:"$PATH" PYTHONPATH=../../lib:"$PYTHONPATH" "$@" <(cat "${training[@]}") | PYTHONPATH=../../lib:"$PYTHONPATH" ../../scripts/eval.py "${testing[@]}"
+  fi
 fi

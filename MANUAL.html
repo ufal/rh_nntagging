@@ -33,9 +33,7 @@ The individual taggers should be placed in subdirectories of the <code>taggers</
 directory. Taggers can be arbitrary executables, fulfilling the following:
 </p>
 <ul style="margin-top:0">
-<li>taggers must handle multiple training data (by concatenating them)
-</li>
-<li>files with training data are passed as last arguments of the command line
+<li>file with training data is passed as the last argument of the command line
 </li>
 <li>testing data are read from standard input and the annotated results
   are printed on standard output
@@ -81,7 +79,8 @@ are stored in a subdirectory <code>exp-experiment_name</code> of the
 <p>
 The <code>-d training_data_file</code> option is optional and can be specified multiple
 times. It specifies training data relative to the <code>data</code> subdirectory of the repo.
-All training files are appended to the command line of the tagger command.
+All training files are appended together and passed as last argument to the
+tagger command.
 </p>
 <p>
 The <code>-e testing_data_file</code> option is optional and can be specified multiple

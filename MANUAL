@@ -6,8 +6,7 @@ Taggers
 
 The individual taggers should be placed in subdirectories of the taggers
 directory. Taggers can be arbitrary executables, fulfilling the following:
-- taggers must handle multiple training data (by concatenating them)
-- files with training data are passed as last arguments of the command line
+- file with training data is passed as the last argument of the command line
 - testing data are read from standard input and the annotated results are
   printed on standard output
 
@@ -40,7 +39,8 @@ directory.
 
 The -d training_data_file option is optional and can be specified multiple
 times. It specifies training data relative to the data subdirectory of the repo.
-All training files are appended to the command line of the tagger command.
+All training files are appended together and passed as last argument to the
+tagger command.
 
 The -e testing_data_file option is optional and can be specified multiple times.
 If specifies testing data relative to the data subdirectory of the repo. If
