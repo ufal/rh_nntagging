@@ -42,6 +42,10 @@ class Tagger(object):
                                           4 * self.n_lstm_cells)
         self.model.lstm_h_to_h = F.Linear(self.n_lstm_cells,
                                           4 * self.n_lstm_cells)
+        self.model.lstm2_x_to_h = F.Linear(self.n_lstm_cells,
+                                          4 * self.n_lstm_cells)
+        self.model.lstm2_h_to_h = F.Linear(self.n_lstm_cells,
+                                          4 * self.n_lstm_cells)
         self.model.yclf = F.Linear(self.n_lstm_cells, len(tags))
 
         # Randomly initialize the parameters.
@@ -86,6 +90,35 @@ class Tagger(object):
             logging.info('  Emb matrix first params: %s' % obj.model.embed.W.flat[:5])
             return obj
 
+    def _compute_seq(self, mb_x, train, lstm_state, reverse=False):
+        mb_size = mb_x.shape[0]
+        n_steps = mb_x.shape[1]
+
+        H = []
+
+        ndx = range(n_steps)
+        if reverse:
+            ndx = reversed(ndx)
+
+        for t in ndx:
+            x_t = chainer.Variable(mb_x[:, t], volatile=not train)
+            c_tm1 = lstm_state['c']
+            h_tm1 = lstm_state['h']
+
+            e_t = self.model.embed(x_t)
+
+            c_t, h_t = F.lstm(c_tm1, self.model.lstm_x_to_h(e_t) + self.model.lstm_h_to_h(h_tm1))
+
+            lstm_state['c'] = c_t
+            lstm_state['h'] = h_t
+
+            H.append(h_t)
+
+        if reverse:
+            H = H[::-1]
+
+        return H
+
     def forward(self, mb_x, mb_y, train=True):
         """Run the model on given minibatch.
 
@@ -107,19 +140,17 @@ class Tagger(object):
         loss = 0.0
 
         lstm_state = self.create_lstm_initial_state(batchsize=mb_size)
+        lstm_state2 = self.create_lstm_initial_state(batchsize=mb_size)
+
+        H_fwd = self._compute_seq(mb_x, train, lstm_state)
+        H_bwd = self._compute_seq(mb_x, train, lstm_state2, reverse=True)
 
         y_hat = []
         for t in range(n_steps):
-            x_t = chainer.Variable(mb_x[:, t], volatile=not train)
+
             y_t = chainer.Variable(mb_y[:, t], volatile=not train)
-            c_tm1 = lstm_state['c']
-            h_tm1 = lstm_state['h']
 
-            e_t = self.model.embed(x_t)
-
-            c_t, h_t = F.lstm(c_tm1, self.model.lstm_x_to_h(e_t) + self.model.lstm_h_to_h(h_tm1))
-
-            yhat_t = self.model.yclf(h_t)
+            yhat_t = self.model.yclf(H_fwd[t] + H_bwd[t])
 
             l_t = F.softmax_cross_entropy(yhat_t, y_t)
             y_hat.append(l_t.creator.y)
