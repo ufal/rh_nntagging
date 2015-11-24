@@ -56,7 +56,7 @@ for command_line in "$@"; do
   log="$dir/../taggers/$tagger/exp-$experiment/$description"
 
   if [ -z "$grid" ]; then
-    "$dir"/run_tagger.sh -t"$tagger" -n"$experiment" "${training[@]}" "${testing[@]}" $command_line >"$log".out 2>"$log".err
+    "$dir"/run_tagger.sh -t"$tagger" -n"$experiment" "${training[@]}" "${testing[@]}" $command_line 2> >(tee "$log.err" >&2) | tee "$log".out
   else
     >"$log".out
     >"$log".err
