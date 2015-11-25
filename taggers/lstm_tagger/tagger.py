@@ -42,7 +42,11 @@ class Tagger(object):
                                           4 * self.n_lstm_cells)
         self.model.lstm_h_to_h = F.Linear(self.n_lstm_cells,
                                           4 * self.n_lstm_cells)
-        self.model.yclf = F.Linear(self.n_lstm_cells, len(tags))
+
+        self.model.lstm_h_to_h_rtl = F.Linear(self.n_lstm_cells, 
+                                              4 * self.n_lstm_cells)
+
+        self.model.yclf = F.Linear(self.n_lstm_cells * 2, len(tags))
 
         # Randomly initialize the parameters.
         for param in self.model.parameters:
@@ -106,18 +110,40 @@ class Tagger(object):
 
         loss = 0.0
 
-        lstm_state = self.create_lstm_initial_state(batchsize=mb_size)
+        c_ltr, h_ltr = self.create_lstm_initial_state(batchsize=mb_size)
+        c_rtl, h_rtl = self.create_lstm_initial_state(batchsize=mb_size)
+
+        hiddens_ltr = []
+        hiddens_rtl = []
 
         y_hat = []
         for t in range(n_steps):
             x_t = chainer.Variable(mb_x[:, t], volatile=not train)
-            y_t = chainer.Variable(mb_y[:, t], volatile=not train)
-            c_tm1 = lstm_state['c']
-            h_tm1 = lstm_state['h']
+
 
             e_t = self.model.embed(x_t)
 
-            c_t, h_t = F.lstm(c_tm1, self.model.lstm_x_to_h(e_t) + self.model.lstm_h_to_h(h_tm1))
+            c_ltr, h_ltr = F.lstm(c_ltr, self.model.lstm_x_to_h(e_t) + self.model.lstm_h_to_h(h_ltr))
+            hiddens_ltr.append(h_ltr)
+
+
+        for t in reversed(range(n_steps)):
+            x_t = chainer.Variable(mb_x[:, t], volatile=not train)
+
+            e_t = self.model.embed(x_t)
+
+            c_rtl, h_rtl = F.lstm(c_rtl, self.model.lstm_x_to_h(e_t) + self.model.lstm_h_to_h(h_rtl))
+            hiddens_rtl.append(h_rtl)
+
+            
+
+
+
+        for t in range(n_steps):
+
+            y_t = chainer.Variable(mb_y[:, t], volatile=not train)
+
+            h_t = F.array.concat.concat((hiddens_ltr[t], hiddens_rtl[n_steps-t-1]))
 
             yhat_t = self.model.yclf(h_t)
 
@@ -126,16 +152,21 @@ class Tagger(object):
 
             loss += l_t * 1.0 / (n_steps * mb_size)
 
+
+
+
+
         y_hat = np.array(y_hat).swapaxes(0, 1)
 
         return loss, y_hat
 
     def create_lstm_initial_state(self, batchsize, train=True):
         """Build initial hidden and cell state for LSTM."""
-        return {name: chainer.Variable(np.zeros((batchsize, self.n_lstm_cells),
-                                                dtype=np.float32),
-                                       volatile=not train)
-                for name in ('c', 'h',)}
+        c = chainer.Variable(np.zeros((batchsize, self.n_lstm_cells),dtype=np.float32), volatile=not train)
+        h = chainer.Variable(np.zeros((batchsize, self.n_lstm_cells),dtype=np.float32), volatile=not train)
+
+        return c, h
+
 
     def learn(self, mb_x, mb_y):
         """Learn from the given minibatch."""
