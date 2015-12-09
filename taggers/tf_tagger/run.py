@@ -114,8 +114,8 @@ class TrainingManager(object):
 
 def taste_tagger(tagger, batches):
     """Print out first 3 examples of the first batch tagged by the model."""
-    mb_x, mb_y = batches[0]
-    mb_y_hat = tagger.predict(mb_x)
+    mb_x, mb_y, lengths = batches[0]
+    mb_y_hat = tagger.predict(mb_x, lengths)
 
     logging.debug("Taste: word tag (true tag)")
     for x, y, y_hat in zip(mb_x, mb_y, mb_y_hat)[:3]:
@@ -134,8 +134,8 @@ def eval_tagger(tagger, batches):
     """Evaluate the tagger on the given data."""
     acc_total = 0.0
     acc_cnt = 0
-    for mb_x, mb_y in batches:
-        mb_y_hat = tagger.predict(mb_x)
+    for mb_x, mb_y, lengths in batches:
+        mb_y_hat = tagger.predict(mb_x, lengths)
 
         acc_total += compute_accuracy(mb_y, mb_y_hat)
         acc_cnt += 1
@@ -178,8 +178,8 @@ def main(training_file, training_dir, load_model, skip_train):
 
         logging.debug('Starting training.')
         while train_mgr.should_continue():
-            mb_x, mb_y = random.choice(batches_train)
-            mb_loss = tagger.learn(mb_x, mb_y)
+            mb_x, mb_y, lengths = random.choice(batches_train)
+            mb_loss = tagger.learn(mb_x, mb_y, lengths)
 
             train_mgr.tick(mb_loss=mb_loss)
 

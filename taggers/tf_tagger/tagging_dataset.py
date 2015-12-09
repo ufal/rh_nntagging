@@ -62,20 +62,26 @@ class TaggingDataset(object):
 
         return res
 
-    def _batch_to_numpy(self, batch, max_seq_len = 30):
-        """Convert given minibatch to numpy arrays with appropriate padding."""
+    def _batch_to_numpy(self, batch, max_seq_len=30, batch_size=50):
+        """
+        Convert given minibatch to numpy arrays with appropriate padding
+        After this, the vocabulary indices are shifted by one where the
+        zero index means the padding.
+        """
 
 #        for x, y in batch:
 #            max_seq_len = max(len(x), max_seq_len)
 
-        res_x = np.zeros((max_seq_len, len(batch)), dtype='int32')
-        res_y = np.zeros((max_seq_len, len(batch)), dtype='int32')# - 1  # Chainer's softmax loss understands -1 as ignore this label.
+        res_x = np.zeros((max_seq_len, batch_size), dtype='int32')
+        res_y = np.zeros((max_seq_len, batch_size), dtype='int32')# - 1  # Chainer's softmax loss understands -1 as ignore this label.
+        lengths = np.zeros((batch_size), dtype='int64')
 
         for i, (x, y) in enumerate(batch):
             res_x[:min(len(x), max_seq_len), i] = x[:min(len(x), max_seq_len)]
             res_y[:min(len(y), max_seq_len), i] = y[:min(len(y), max_seq_len)]
+            lengths[i] = len(x)
 
-        return res_x.T, res_y.T
+        return res_x.T, res_y.T, lengths
 
     @staticmethod
     def load_from_file(fname, vocab=None, tags=None):
