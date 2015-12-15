@@ -55,8 +55,12 @@ class Tagger(object):
         
         # self.char_states je python list hodnot, ktery maj shape [batch_size * num_steps, char_embedding_size] a kterejch je num_chars.
         # my chceme vybrat posledni
-        self.last_char_states = tf.reshape(self.char_outputs[num_chars-1], [batch_size, num_steps, char_embedding_size], name="reshape-charstates")
-        self.last_char_states_rev = tf.reshape(self.char_outputs_rev[num_chars-1], [batch_size, num_steps, char_embedding_size], name="reshape-charstates_rev")
+
+        self.last_char_lstm_state = tf.split(1, 2, self.char_states[num_chars - 1])[1]
+        self.last_char_lstm_state_rev = tf.split(1, 2, self.char_states_rev[num_chars - 1])[1]
+
+        self.last_char_states = tf.reshape(self.last_char_lstm_state, [batch_size, num_steps, char_embedding_size], name="reshape-charstates")
+        self.last_char_states_rev = tf.reshape(self.last_char_lstm_state_rev, [batch_size, num_steps, char_embedding_size], name="reshape-charstates_rev")
 
         self.char_output = tf.concat(2, [self.last_char_states, self.last_char_states_rev])
 
