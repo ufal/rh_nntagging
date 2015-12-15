@@ -9,7 +9,7 @@ from vocab import Vocab
 
 class TaggingDataset(object):
     """Holds a dataset for tagging."""
-    def __init__(self, seqs, vocab, label_vocab):
+    def __init__(self, seqs, vocab, alphabet, label_vocab):
         """Initialize new dataset.
 
         Args:
@@ -19,6 +19,7 @@ class TaggingDataset(object):
         """
         self.seqs = seqs
         self.vocab = vocab
+        self.alphabet = alphabet
         self.tags = label_vocab
 
     def get_n_tags(self):
@@ -39,8 +40,8 @@ class TaggingDataset(object):
         pivot = int(ratio * len(self.seqs))
         seqs1 = self.seqs[:pivot]
         seqs2 = self.seqs[pivot:]
-        d1 = TaggingDataset(seqs1, self.vocab, self.tags)
-        d2 = TaggingDataset(seqs2, self.vocab, self.tags)
+        d1 = TaggingDataset(seqs1, self.vocab, self.alphabet, self.tags)
+        d2 = TaggingDataset(seqs2, self.vocab, self.alphabet, self.tags)
 
         return d1, d2
 
@@ -62,7 +63,7 @@ class TaggingDataset(object):
 
         return res
 
-    def _batch_to_numpy(self, batch, max_seq_len=30, batch_size=50):
+    def _batch_to_numpy(self, batch, max_seq_len=30, max_word_len=20, batch_size=50):
         """
         Convert given minibatch to numpy arrays with appropriate padding
         After this, the vocabulary indices are shifted by one where the
@@ -72,38 +73,47 @@ class TaggingDataset(object):
 #        for x, y in batch:
 #            max_seq_len = max(len(x), max_seq_len)
 
-        res_x = np.zeros((max_seq_len, batch_size), dtype='int32')
-        res_y = np.zeros((max_seq_len, batch_size), dtype='int32')# - 1  # Chainer's softmax loss understands -1 as ignore this label.
+        res_x = np.zeros((batch_size, max_seq_len), dtype='int32')
+        res_c = np.zeros((batch_size, max_seq_len, max_word_len), dtype='int32')
+        res_y = np.zeros((batch_size, max_seq_len), dtype='int32')
         lengths = np.zeros((batch_size), dtype='int64')
 
-        for i, (x, y) in enumerate(batch):
-            res_x[:min(len(x), max_seq_len), i] = x[:min(len(x), max_seq_len)]
-            res_y[:min(len(y), max_seq_len), i] = y[:min(len(y), max_seq_len)]
-            lengths[i] = len(x)
+        for i, (words, chars, tags) in enumerate(batch):
+            res_x[i, :min(len(words), max_seq_len)] = words[:min(len(words), max_seq_len)]
+            res_y[i, :min(len(tags), max_seq_len)] = tags[:min(len(tags), max_seq_len)]
 
-        return res_x.T, res_y.T, lengths
+            for j in range(min(len(words), max_seq_len)):                
+                res_c[i, j, :min(len(chars[j]), max_word_len)] = chars[j][:min(len(chars[j]), max_word_len)]
+
+
+            lengths[i] = len(words)
+
+        return res_x, res_c, res_y, lengths
 
     @staticmethod
-    def load_from_file(fname, vocab=None, tags=None):
+    def load_from_file(fname, vocab=None, alphabet=None, tags=None):
         """Load dataset from the given file."""
         reader = conllu.reader(fname)
 
-        learn_tags, learn_vocab, tags, vocab = TaggingDataset.initialize_vocab_and_tags(tags, vocab)
+        learn_tags, learn_vocab, tagset, vocab, alphabet = TaggingDataset.initialize_vocab_and_tags(tags, vocab, alphabet)
 
         seqs = []
         for sentence in reader:
-            x = []
-            y = []
+            words = []
+            tags = []
+            chars = []
+
             for word in sentence:
-                word_id, tag_id = TaggingDataset.get_word_and_tag_id(word, vocab, tags,
+                word_id, char_ids, tag_id = TaggingDataset.get_word_and_tag_id(word, vocab, alphabet, tagset,
                                                                      learn_vocab, learn_tags)
 
-                x.append(word_id)
-                y.append(tag_id)
+                words.append(word_id)
+                chars.append(char_ids)
+                tags.append(tag_id)
 
-            seqs.append((x, y))
+            seqs.append((words, chars, tags))
 
-        res = TaggingDataset(seqs, vocab, tags)
+        res = TaggingDataset(seqs, vocab, alphabet, tagset)
 
         return res
 
@@ -113,10 +123,13 @@ class TaggingDataset(object):
         return word.form
 
     @staticmethod
-    def initialize_vocab_and_tags(tags, vocab):
+    def initialize_vocab_and_tags(tags, vocab, alphabet):
         if not vocab:
             vocab = Vocab()
             vocab.add('#OOV')
+            alphabet = Vocab()
+            alphabet.add('#OOA')
+
             learn_vocab = True
         else:
             learn_vocab = False
@@ -126,19 +139,25 @@ class TaggingDataset(object):
         else:
             learn_tags = False
 
-        return learn_tags, learn_vocab, tags, vocab
+
+        return learn_tags, learn_vocab, tags, vocab, alphabet
 
     @staticmethod
-    def get_word_and_tag_id(word, vocab, tags, learn_vocab, learn_tags):
+    def get_word_and_tag_id(word, vocab, alphabet, tags, learn_vocab, learn_tags):
+        word_text = TaggingDataset.word_obj_to_str(word)
+        chars = list(word_text)
+
         if learn_vocab:
-            word_id = vocab.add(TaggingDataset.word_obj_to_str(word))
+            word_id = vocab.add(word_text)
+            char_ids = [alphabet.add(char) for char in chars]
         else:
-            word_id = vocab.get(TaggingDataset.word_obj_to_str(word), vocab['#OOV'])
+            word_id = vocab.get(word_text, vocab['#OOV'])
+            char_ids = [alphabet.get(char, alphabet['#OOA']) for char in chars]
         if learn_tags:
             tag_id = tags.add(word.upos)
         else:
             tag_id = tags[word.upos]
-        return word_id, tag_id
+        return word_id, char_ids, tag_id
 
 
 def main(fname, split, dont_shuffle, fout1, fout2):

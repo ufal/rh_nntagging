@@ -114,8 +114,8 @@ class TrainingManager(object):
 
 def taste_tagger(tagger, batches):
     """Print out first 3 examples of the first batch tagged by the model."""
-    mb_x, mb_y, lengths = batches[0]
-    mb_y_hat = tagger.predict(mb_x, lengths)
+    mb_x, chars, mb_y, lengths = batches[0]
+    mb_y_hat = tagger.predict(mb_x, chars, lengths)
 
     logging.debug("Taste: word tag (true tag)")
     for x, y, y_hat in zip(mb_x, mb_y, mb_y_hat)[:3]:
@@ -134,8 +134,8 @@ def eval_tagger(tagger, batches):
     """Evaluate the tagger on the given data."""
     acc_total = 0.0
     acc_cnt = 0
-    for mb_x, mb_y, lengths in batches:
-        mb_y_hat = tagger.predict(mb_x, lengths)
+    for mb_x, chars, mb_y, lengths in batches:
+        mb_y_hat = tagger.predict(mb_x, chars, lengths)
 
         acc_total += compute_accuracy(mb_y, mb_y_hat)
         acc_cnt += 1
@@ -160,7 +160,7 @@ def main(training_file, training_dir, load_model, skip_train):
     logging.debug('Loading dataset from: %s' % training_file)
     data = TaggingDataset.load_from_file(training_file)
     logging.debug('Initializing model.')
-    tagger = Tagger(data.vocab, data.tags)
+    tagger = Tagger(data.vocab, data.tags, data.alphabet)
 
     if not skip_train:
         train_data, dev_data = data.split(0.7)
@@ -178,8 +178,8 @@ def main(training_file, training_dir, load_model, skip_train):
 
         logging.debug('Starting training.')
         while train_mgr.should_continue():
-            mb_x, mb_y, lengths = random.choice(batches_train)
-            mb_loss = tagger.learn(mb_x, mb_y, lengths)
+            words, chars, tags, lengths = random.choice(batches_train)
+            mb_loss = tagger.learn(words, chars, tags, lengths)
 
             train_mgr.tick(mb_loss=mb_loss)
 
