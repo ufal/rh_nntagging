@@ -135,6 +135,7 @@ class TaggingDataset(object):
             learn_vocab = False
         if not tags:
             tags = Vocab()
+            tags.add("#OOT")
             learn_tags = True
         else:
             learn_tags = False

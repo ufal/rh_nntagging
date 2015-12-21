@@ -20,6 +20,6 @@ sentence = []
 for arg in sys.argv[1:]:
     reader = conllu.reader(arg)
     while reader.next_sentence(sentence):
-        for word in sentence:
-            word.lemma, word.upos, word.lpos, word.feats, word.head, word.deprel, word.deps, word.misc = '', '', '', '', -1, '', '', ''
+#        for word in sentence:
+#            word.lemma, word.upos, word.lpos, word.feats, word.head, word.deprel, word.deps, word.misc = '', '', '', '', -1, '', '', ''
         stdout.write_sentence(sentence)

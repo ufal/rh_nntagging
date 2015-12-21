@@ -6,8 +6,8 @@ from tensorflow.models.rnn import rnn_cell, rnn, seq2seq
 
 class Tagger(object):
     """LSTM tagger model."""
-    def __init__(self, vocab, tagset, alphabet, word_embedding_size=128,
-                 char_embedding_size=16, num_chars=20, num_steps=30):
+    def __init__(self, vocab, tagset, alphabet, word_embedding_size,
+                 char_embedding_size, num_chars, num_steps):
         """
         Builds the tagger computation graph and initializes it in a TensorFlow
         session.
@@ -124,8 +124,8 @@ class Tagger(object):
         self.logits = tf.reshape(self.logits_flatten, [-1, num_steps, len(tagset)], name="reshape-logits")
 
         # output maks: compute loss only if it insn't a padded word (i.e. zero index)
-        #output_mask = tf.reshape(tf.to_float(tf.not_equal(self.tags, 0)), [-1])
-        output_mask = tf.reshape(tf.to_float(tf.greater_equal(self.tags, 0)), [-1])
+        output_mask = tf.reshape(tf.to_float(tf.not_equal(self.tags, 0)), [-1])
+        #output_mask = tf.reshape(tf.to_float(tf.greater_equal(self.tags, 0)), [-1])
 
         self.loss = seq2seq.sequence_loss_by_example(
             logits=[self.logits_flatten],
@@ -157,3 +157,8 @@ class Tagger(object):
                 feed_dict={self.words: words, self.characters: chars, self.sentence_lengths: lengths, self.dropout_prob: np.array([1])})
 
         return np.argmax(logits, axis=2)
+
+    def tag_single_sentence(self, words, chars):
+        """Tags a sentence of arbitrary length."""
+
+        pass

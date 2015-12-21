@@ -3,8 +3,9 @@ class Vocab(dict):
     def __init__(self):
         super(Vocab, self).__init__()
 
-        self._rev = dict()
+        self._rev = {}
         self.frozen = False
+        self.counts = []
 
     def freeze(self):
         """Freeze the mapping and raise exception if anyone is trying to add values into it."""
@@ -16,12 +17,20 @@ class Vocab(dict):
             if self.frozen:
                 raise KeyError
 
-            val = len(self)
-            self[word] = val
-            self._rev[val] = word
+            word_id = len(self)
+            self[word] = word_id
+            self._rev[word_id] = word
+            self.counts.append(0)
+        else:
+            word_id = self[word]
 
-        return self[word]
+        self.counts[word_id] += 1
+        return word_id
 
     def rev(self, word_id):
         """Return the string token for given id."""
         return self._rev[word_id]
+
+    def count(self, word_id):
+        """Returns frequency of word of given id."""
+        return self.counts[word_id]
