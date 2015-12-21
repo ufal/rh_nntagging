@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<treebank>
+  <!-- tokens means "surface tokens", e.g. Spanish "vámonos" counts as one token
+       words means "syntactic words", e.g. Spanish "vámonos" is split to two words, "vamos" and "nos"
+       fused is the number of tokens that are split to two or more syntactic words
+       The words and fused elements can be omitted if no token is split to smaller syntactic words. -->
+  <size>
+    <total><sentences>8993</sentences><tokens>121443</tokens><words>121443</words><fused>0</fused></total>
+  </size>
+  <lemmas unique="10999" /><!-- ., ,, izan, *edun, eta, ", egin, ukan, ez, bat, egon, hori, ere, baina, bera -->
+  <forms unique="24259" /><!-- ., ,, eta, ", da, ez, zuen, du, zen, izan, egin, dira, ere, baina, bat -->
+  <fusions unique="0" /><!--  -->
+  <!-- Statistics of universal POS tags. The comments with the most frequent lemmas are optional (but easy to obtain). -->
+  <tags unique="16">
+    <tag name="ADJ">5973</tag><!-- handi, on, nagusi, berri, bakar, politiko, oso, garrantzitsu, batu, txiki -->
+    <tag name="ADP">1876</tag><!-- arte, _, arabera, inguru, aurre, aurka, gabe, gain, alde, buruz -->
+    <tag name="ADV">5178</tag><!-- atzo, oso, gaur, orain, ondoren, gero, hala, han, bertan, beti -->
+    <tag name="AUX">10073</tag><!-- *edun, izan, *edin, *ezan, ari, ukan -->
+    <tag name="CONJ">6187</tag><!-- eta, ere, baina, edo, berriz, arren, ordea, gainera, beraz, bestalde -->
+    <tag name="DET">4074</tag><!-- hori, bera, beste, hau, guzti, hura, batzuk, horiek, hauek, zer -->
+    <tag name="INTJ">36</tag><!-- beno, alde, a, dzast, ea, hara, kaixo, tira, ahalena, ai -->
+    <tag name="NOUN">29777</tag><!-- talde, urte, behar, nahi, partidu, herri, lan, egun, jokalari, gobernu -->
+    <tag name="NUM">4613</tag><!-- bat, bi, azken, lehen, hiru, bigarren, lau, bost, lehenengo, sei -->
+    <tag name="PART">1460</tag><!-- ez, bai, omen -->
+    <tag name="PRON">785</tag><!-- ni, gu, eurak, inor, zerbait, ezer, zu, elkar, nor, beraiek -->
+    <tag name="PROPN">9869</tag><!-- Europa, Espainia, Frantzia, Real, EEBB, ETA, Israel, Athletic, EAJ, Madril -->
+    <tag name="PUNCT">19811</tag><!-- ., ,, ", :, (, -, ), ?, ;, ! -->
+    <tag name="SYM">15</tag><!-- cm, m, kV, kg, kW, km -->
+    <tag name="VERB">21543</tag><!-- izan, egin, ukan, egon, esan, eman, jokatu, hartu, joan, lortu -->
+    <tag name="X">173</tag><!-- baino, de, ohi, del, ea, el, ezta, la, gehi, Las -->
+  </tags>
+  <!-- Statistics of features and values. The comments with the most frequent word forms are optional (but easy to obtain). -->
+  <feats unique="69">
+    <feat name="Animacy" value="Anim" upos="ADP,NOUN,PROPN">1288</feat><!-- lagun, jokalariak, ordezkariak, jokalariek, agintariek, hilaren, ministroak, epaileak, arduradunak, arteko -->
+    <feat name="Animacy" value="Inan" upos="ADJ,ADP,NOUN,PROPN,SYM">12165</feat><!-- taldeak, urte, ondorioz, partidua, aukera, taldea, aurretik, urteko, garaipena, gabe -->
+    <feat name="Aspect" value="Imp" upos="VERB">1820</feat><!-- egiten, ematen, izaten, erabiltzen, ikusten, agertzen, esaten, hartzen, gertatzen, jarraitzen -->
+    <feat name="Aspect" value="Perf" upos="VERB">5765</feat><!-- izan, egin, esan, eman, joan, lortu, hasi, hil, irabazi, azaldu -->
+    <feat name="Aspect" value="Pro" upos="VERB">1529</feat><!-- izango, egingo, jokatuko, egongo, hartuko, emango, hasiko, aurkeztuko, izanen, joango -->
+    <feat name="Aspect" value="Prog" upos="AUX,VERB">4818</feat><!-- da, dira, du, dago, dela, zen, dute, zegoen, daude, dugu -->
+    <feat name="Case" value="Abl" upos="ADJ,ADP,ADV,AUX,DET,NOUN,PROPN,VERB">882</feat><!-- aurretik, bestetik, hasieratik, horretatik, aldetik, gainetik, ondotik, handik, atzetik, etxetik -->
+    <feat name="Case" value="Abs" upos="ADJ,ADP,ADV,AUX,DET,NOUN,NUM,PRON,PROPN,SYM,VERB">17381</feat><!-- behar, hori, nahi, hau, handia, batzuk, arte, zer, aurka, uste -->
+    <feat name="Case" value="All" upos="ADJ,ADP,ADV,DET,NOUN,PRON,PROPN,VERB">864</feat><!-- behera, aurrera, batera, aldera, segundora, etxera, kanpora, gainera, ematera, herrira -->
+    <feat name="Case" value="Ben" upos="ADJ,AUX,DET,NOUN,PRON,PROPN,VERB">131</feat><!-- gehienentzat, guztientzat, harentzat, Alavesentzat, Eibarrentzat, Udalbiltzarentzat, emakumeentzat, ertzainentzat, gorritxoentzat, guztiontzat -->
+    <feat name="Case" value="Cau" upos="ADJ,AUX,DET,NOUN,PRON,PROPN,VERB">123</feat><!-- horregatik, izateagatik, arazoengatik, beragatik, honengatik, Horrexegatik, delituengatik, emateagatik, gorrotoarengatik, hilketagatik -->
+    <feat name="Case" value="Com" upos="ADJ,AUX,DET,NOUN,NUM,PRON,PROPN,VERB">659</feat><!-- horrekin, taldearekin, urterekin, elkarrekin, punturekin, honekin, aldearekin, batzuekin, lagunekin, selekzioarekin -->
+    <feat name="Case" value="Dat" upos="ADJ,ADV,AUX,DET,NOUN,PRON,PROPN,VERB">1216</feat><!-- horri, gobernuari, honi, ETAri, palestinarrei, guztiei, mahai, Jaurlaritzari, buruari, hari -->
+    <feat name="Case" value="Erg" upos="ADJ,ADV,AUX,DET,NOUN,PRON,PROPN,VERB">4402</feat><!-- horrek, taldeak, berak, gobernuak, honek, presidenteak, inork, horiek, ministroak, Miarritzek -->
+    <feat name="Case" value="Ess" upos="ADJ,NOUN,PROPN,VERB">76</feat><!-- ezinbestekotzat, garrantzitsutzat, nagusitzat, basatitzat, egokitzat, erreformistatzat, historikotzat, normaltzat, oinarritzat, positibotzat -->
+    <feat name="Case" value="Gen" upos="ADJ,ADP,ADV,AUX,DET,NOUN,PRON,PROPN,VERB">3903</feat><!-- bere, horren, haren, honen, beren, horien, eskubideen, haien, taldearen, ETAren -->
+    <feat name="Case" value="Ine" upos="ADJ,ADP,ADV,AUX,DET,NOUN,PRON,PROPN,VERB">5755</feat><!-- artean, horretan, honetan, aurrean, ostean, inguruan, herrian, igandean, orain, berean -->
+    <feat name="Case" value="Ins" upos="ADJ,ADP,DET,NOUN,PRON,PROPN,VERB">1071</feat><!-- ondorioz, aldiz, ustez, bidez, eginez, handiz, asmoz, euskaraz, urtez, erabiliz -->
+    <feat name="Case" value="Lat" upos="ADJ,ADV,DET,NOUN,PROPN">19</feat><!-- Baturantz, beherantz, Beherantza, Ingalaterrarantz, barnerantz, besterantz, gorantz, helmugarantz, iparralderantz, mahaigainerantz -->
+    <feat name="Case" value="Loc" upos="ADJ,ADP,ADV,AUX,DET,NOUN,NUM,PRON,PROPN,SYM,VERB">5149</feat><!-- arteko, egindako, Europako, egiteko, Espainiako, Frantziako, Israelgo, aurkako, taldeko, munduko -->
+    <feat name="Case" value="Par" upos="ADJ,ADV,AUX,DET,NOUN,PROPN,VERB">717</feat><!-- handirik, aukerarik, besterik, izanik, halakorik, onik, arazorik, aldaketarik, askorik, asmorik -->
+    <feat name="Definite" value="Def" upos="ADJ,ADP,ADV,AUX,DET,NOUN,PRON,PROPN,SYM,VERB">31785</feat><!-- hori, hau, horretan, handia, artean, arabera, batzuk, guztiak, honetan, aurka -->
+    <feat name="Definite" value="Ind" upos="ADJ,ADP,ADV,AUX,DET,NOUN,NUM,PRON,PROPN,VERB">6156</feat><!-- behar, nahi, zer, uste, gehiago, asko, ezin, urte, ondorioz, gabe -->
+    <feat name="Degree" value="Abs" upos="ADJ,ADV">30</feat><!-- goizegi, azkarregi, handiegia, estuegiak, berantegi, garestiegi, Urrutiegi, alaiegia, altuegia, bigunegia -->
+    <feat name="Degree" value="Cmp" upos="ADJ,ADV,NOUN,VERB">176</feat><!-- nahiago, handiagoa, beranduago, errazago, gehiago, lasaiago, azkarrago, indartsuago, txikiagoa, txikiagoan -->
+    <feat name="Degree" value="Sup" upos="ADJ,ADP,ADV,NOUN,VERB">328</feat><!-- onena, garrantzitsuena, handiena, onenak, onenetakoa, indartsuena, onenean, azkarrena, garrantzitsuenak, egokiena -->
+    <feat name="Gender" value="Fem" upos="AUX,VERB">44</feat><!-- dun, dinat, naun, din, ditun, niken, zion, baditinagu, baditinat, bazaukan -->
+    <feat name="Gender" value="Masc" upos="AUX,VERB">27</feat><!-- duk, diat, dik, nian, zekiat, ditik, dituk, gaudek, nauk, zagok -->
+    <feat name="Gender[dat]" value="Masc" upos="AUX,VERB">5</feat><!-- diat, diagu, nian, zaik -->
+    <feat name="Gender[erg]" value="Fem" upos="AUX,VERB">8</feat><!-- ezan, daukanan, dun, dunala, iezaion, nazan -->
+    <feat name="Gender[erg]" value="Masc" upos="AUX,VERB">5</feat><!-- duk, Badakik, baduala, duan -->
+    <feat name="Mood" value="Cnd" upos="AUX,VERB">200</feat><!-- litzateke, luke, balitz, nuke, balu, lirateke, litzaidake, lukeela, lukete, genuke -->
+    <feat name="Mood" value="Imp" upos="AUX,VERB">47</feat><!-- ezazu, itzazu, zaitez, egizu, ezan, ezazue, hago, iezaiezu, zaude, Demagun -->
+    <feat name="Mood" value="Ind" upos="AUX,VERB">14030</feat><!-- da, zuen, du, zen, dira, dute, zuten, ziren, ditu, dela -->
+    <feat name="Mood" value="Pot" upos="AUX,VERB">302</feat><!-- daiteke, dezake, baliteke, daitezke, litekeena, daitekeela, daitezkeen, liteke, daitekeen, dezakeen -->
+    <feat name="Mood" value="Sub" upos="AUX,VERB">96</feat><!-- dadin, dezagun, dezan, dezala, dadila, daitezen, dezaten, ditzan, zezaten, dagokionean -->
+    <feat name="Negative" value="Neg" upos="PART">1398</feat><!-- ez, ezetz -->
+    <feat name="Negative" value="Pos" upos="AUX,PART,VERB">246</feat><!-- bai, badu, baliteke, bada, badago, badaude, badakigu, badirudi, badaki, badira -->
+    <feat name="Number" value="Plur" upos="ADJ,ADP,ADV,AUX,DET,NOUN,PRON,PROPN,SYM,VERB">6931</feat><!-- batzuk, artean, guztiak, horiek, hauek, arteko, beren, arabera, EEBBetako, gauzak -->
+    <feat name="Number" value="Sing" upos="ADJ,ADP,ADV,AUX,DET,NOUN,NUM,PRON,PROPN,SYM,VERB">25331</feat><!-- bere, hori, hau, horretan, handia, honetan, horrek, bera, ona, arabera -->
+    <feat name="Number[abs]" value="Plur" upos="AUX,VERB">3421</feat><!-- dira, ziren, ditu, zituen, dituzte, zituzten, daude, direla, diren, ditugu -->
+    <feat name="Number[abs]" value="Sing" upos="AUX,VERB">11254</feat><!-- da, zuen, du, zen, dute, zuten, dela, den, dago, zion -->
+    <feat name="Number[dat]" value="Plur" upos="AUX,VERB">329</feat><!-- die, zien, diete, zieten, zigun, zaie, digu, dagokienez, zaigu, digute -->
+    <feat name="Number[dat]" value="Sing" upos="AUX,VERB">968</feat><!-- zion, dio, zioten, diote, zaio, zitzaion, dagokionez, zait, diogu, zidan -->
+    <feat name="Number[erg]" value="Plur" upos="AUX,VERB">2592</feat><!-- dute, zuten, dugu, dituzte, duten, zituzten, ditugu, diote, zioten, genuen -->
+    <feat name="Number[erg]" value="Sing" upos="AUX,VERB">5235</feat><!-- zuen, du, ditu, zituen, zion, dut, duen, dio, duela, nuen -->
+    <feat name="NumType" value="Card" upos="NUM">2007</feat><!-- bat, batean, baten, batek, batez, batekin, batera, bateko, baterako, bi -->
+    <feat name="NumType" value="Ord" upos="NUM">1048</feat><!-- azken, lehen, bigarren, hirugarren, lehenengo, laugarren, bosgarren, seigarren, II.a, lehena -->
+    <feat name="Person" value="1" upos="ADP,NOUN,PRON">33</feat><!-- neure, artean, inguruan, neu, aldetik, begira, bezala, geu, geure, Geuregan -->
+    <feat name="Person" value="2" upos="ADP,PRON">9</feat><!-- Zeu, Zeuk, artean, barneko, gain, gisara, heure, inguruan, zeure -->
+    <feat name="Person" value="3" upos="ADP,PRON">8</feat><!-- arteko, zenbaitzuk, aitzinean, artean, esku, kontra -->
+    <feat name="Person[abs]" value="1" upos="AUX,VERB">417</feat><!-- naiz, gara, nintzen, nago, ginen, gaude, garela, nengoen, naizela, nau -->
+    <feat name="Person[abs]" value="2" upos="AUX,VERB">96</feat><!-- zara, haiz, zaitez, zaude, zinen, zoaz, zaitu, hago, zaitut, zarela -->
+    <feat name="Person[abs]" value="3" upos="AUX,VERB">14162</feat><!-- da, zuen, du, zen, dira, dute, zuten, ziren, ditu, dela -->
+    <feat name="Person[dat]" value="1" upos="AUX,VERB">203</feat><!-- zait, zidan, zigun, digu, dit, zitzaidan, zaigu, digute, litzaidake, didate -->
+    <feat name="Person[dat]" value="2" upos="AUX,VERB">51</feat><!-- zaizu, dizu, dizuet, dizute, zaizkizun, diat, dizut, genizuen, zaizkizu, bazaizu -->
+    <feat name="Person[dat]" value="3" upos="AUX,VERB">1043</feat><!-- zion, dio, zioten, diote, zaio, die, zien, zitzaion, dagokionez, diogu -->
+    <feat name="Person[erg]" value="1" upos="AUX,VERB">1036</feat><!-- dugu, dut, ditugu, nuen, genuen, ditut, diogu, dugun, diot, nuke -->
+    <feat name="Person[erg]" value="2" upos="AUX,VERB">212</feat><!-- duzu, dituzu, duzue, ezazu, itzazu, zenuen, baduzu, diozu, badakizu, dezakezu -->
+    <feat name="Person[erg]" value="3" upos="AUX,VERB">6579</feat><!-- zuen, du, dute, zuten, ditu, zituen, zion, dituzte, duen, dio -->
+    <feat name="Polite" value="Inf" upos="AUX,PRON,VERB">72</feat><!-- dun, duk, dinat, naun, diat, din, dik, ditun, nian, niken -->
+    <feat name="Polite[abs]" value="Inf" upos="AUX,VERB">17</feat><!-- haiz, hago, Hoa, haiteke, haudala, hinduan, hintzen -->
+    <feat name="Polite[dat]" value="Inf" upos="AUX,VERB">5</feat><!-- diat, diagu, nian, zaik -->
+    <feat name="Polite[erg]" value="Inf" upos="AUX,VERB">16</feat><!-- ezan, duk, huan, Badakik, baduala, baheukan, daukanan, duan, dun, dunala -->
+    <feat name="PronType" value="Int" upos="ADV,PRON">168</feat><!-- nola, zergatik, non, nork, noiz, nondik, nor, zelan, nora, noren -->
+    <feat name="PronType" value="Prs" upos="PRON">525</feat><!-- gure, nire, nik, euren, guk, ni, zure, gu, beraiek, niri -->
+    <feat name="VerbForm" value="Inf" upos="VERB">2212</feat><!-- egiten, ematen, izan, izaten, erabiltzen, ikusten, agertzen, esaten, hartzen, gertatzen -->
+    <feat name="VerbForm" value="Part" upos="ADV,VERB">11217</feat><!-- izan, egin, izango, esan, eman, hasi, joan, lortu, hartu, irabazi -->
+    <feat name="Voice" value="Cau" upos="VERB">234</feat><!-- adierazi, jakinarazi, adierazten, ohartarazi, jakinaraziko, geldiarazi, gogorarazi, galarazi, gogorarazten, oroitarazi -->
+  </feats>
+  <!-- Statistics of universal dependency relations. -->
+  <deps unique="30">
+    <dep name="acl">1147</dep>
+    <dep name="advcl">5367</dep>
+    <dep name="advmod">5368</dep>
+    <dep name="amod">4190</dep>
+    <dep name="appos">555</dep>
+    <dep name="aux">10377</dep>
+    <dep name="case">1890</dep>
+    <dep name="cc">4678</dep>
+    <dep name="ccomp">1190</dep>
+    <dep name="compound">1609</dep>
+    <dep name="conj">5204</dep>
+    <dep name="cop">2453</dep>
+    <dep name="csubj">305</dep>
+    <dep name="dep">244</dep>
+    <dep name="det">3032</dep>
+    <dep name="discourse">66</dep>
+    <dep name="dobj">7522</dep>
+    <dep name="iobj">1022</dep>
+    <dep name="mark">217</dep>
+    <dep name="mwe">290</dep>
+    <dep name="name">2057</dep>
+    <dep name="neg">1355</dep>
+    <dep name="nmod">20264</dep>
+    <dep name="nsubj">8717</dep>
+    <dep name="nummod">2040</dep>
+    <dep name="parataxis">49</dep>
+    <dep name="punct">19808</dep>
+    <dep name="root">8993</dep>
+    <dep name="vocative">42</dep>
+    <dep name="xcomp">1392</dep>
+  </deps>
+</treebank>

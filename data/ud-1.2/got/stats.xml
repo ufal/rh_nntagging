@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<treebank>
+  <!-- tokens means "surface tokens", e.g. Spanish "vámonos" counts as one token
+       words means "syntactic words", e.g. Spanish "vámonos" is split to two words, "vamos" and "nos"
+       fused is the number of tokens that are split to two or more syntactic words
+       The words and fused elements can be omitted if no token is split to smaller syntactic words. -->
+  <size>
+    <total><sentences>5450</sentences><tokens>56128</tokens><words>56128</words><fused>0</fused></total>
+  </size>
+  <lemmas unique="3351" /><!-- jah, sa, is, in, wisan#1, ni, qiþan, du, jūs, ik, saei, iþ, þan, alls, guþ -->
+  <forms unique="8796" /><!-- jah, in, ni, du, izwis, iþ, þan, þatei, ist, imma, ei, qaþ, im, is, ina -->
+  <fusions unique="0" /><!--  -->
+  <!-- Statistics of universal POS tags. The comments with the most frequent lemmas are optional (but easy to obtain). -->
+  <tags unique="13">
+    <tag name="ADJ">3281</tag><!-- sa, manags, anþar, silba, goþs, jains, weihs, mikils, ubils, dauþs -->
+    <tag name="ADP">4944</tag><!-- in, du, bi, us, ana, miþ, fram, at, þairh, af -->
+    <tag name="ADV">5207</tag><!-- ni, þan, jah, auk, nu, swe, unte, swaswe, swa, aftra -->
+    <tag name="CONJ">5165</tag><!-- jah, iþ, ak, aþþan, -uh, aiþþau, akei, nih, þau, jaþþe -->
+    <tag name="DET">1880</tag><!-- sa, sah -->
+    <tag name="INTJ">216</tag><!-- sai, amen, jai, ne, wai, ja, o, wainei -->
+    <tag name="NOUN">10390</tag><!-- guþ, frauja, manna#2, sunus, atta, dags, waurd, leik, ahma, broþar -->
+    <tag name="NUM">401</tag><!-- ains, twai, twalif, þreis*, fimf, sibun, taihun, tigjus*, fidwor, þūsundi -->
+    <tag name="PRON">8157</tag><!-- is, jūs, ik, saei, alls, ƕas, þu, meins, *seins, weis -->
+    <tag name="PROPN">1842</tag><!-- Iesus, Xristus, Iohannes, Paitrus, Marja, Israel, Moses, Seimon, Peilatus, Abraham -->
+    <tag name="SCONJ">1702</tag><!-- ei, þatei, jabai, unte, þan, biþe, miþþanei, nibai, ibai, swaswe -->
+    <tag name="VERB">12924</tag><!-- wisan#1, qiþan, wairþan, qiman, haban, gaggan, taujan, ga-saiƕan, ga-laubjan, ga-leiþan -->
+    <tag name="X">19</tag><!-- osanna, ailoe, helei, lima, sibakþanei, abba, aiffaþa, aþa, kaurban, kumei -->
+  </tags>
+  <!-- Statistics of features and values. The comments with the most frequent word forms are optional (but easy to obtain). -->
+  <feats unique="39">
+    <feat name="Aspect" value="Perf" upos="VERB">731</feat><!-- gameliþ, skuld, gamelido, qiþan, atgiban, gabaurans, gamelid, daupidai, haitans, bigitans -->
+    <feat name="Case" value="Acc" upos="ADJ,DET,NOUN,NUM,PRON,PROPN,VERB">7180</feat><!-- ina, þata, mik, þo, izwis, þana, sik, ƕa, þuk, þans -->
+    <feat name="Case" value="Dat" upos="ADJ,DET,NOUN,NUM,PRON,PROPN,VERB">7816</feat><!-- imma, izwis, im, mis, þamma, þaim, þus, guda, þizai, sis -->
+    <feat name="Case" value="Gen" upos="ADJ,DET,NOUN,NUM,PRON,PROPN,VERB">3619</feat><!-- is, gudis, þis, þize, Xristaus, fraujins, ize, sunaus, Iesuis, mans -->
+    <feat name="Case" value="Nom" upos="ADJ,DET,NOUN,NUM,PRON,PROPN,VERB">9530</feat><!-- sa, ik, Iesus, þai, saei, jus, þata, ƕas, is, so -->
+    <feat name="Case" value="Voc" upos="ADJ,NOUN,PRON,PROPN,VERB">261</feat><!-- frauja, broþrjus, laisari, atta, Iesu, guþ, sunau, talzjand, liubans, barnilo -->
+    <feat name="Degree" value="Cmp" upos="ADJ,ADV">173</feat><!-- mais, managizo, maiza, fruma, sutizo, azetizo, iftumin, aljaleikos, batizo, frumin -->
+    <feat name="Degree" value="Pos" upos="ADJ,ADV">2189</feat><!-- filu, managai, anþar, silba, dauþaim, silban, silbans, anþara, leitil, goþ -->
+    <feat name="Degree" value="Sup" upos="ADJ,ADV">129</feat><!-- auhumistans, frumist, frumista, spedistin, sinistam, hauhistins, sinistans, auhumista, auhumistins, auhumistam -->
+    <feat name="Gender" value="Fem" upos="ADJ,DET,NOUN,NUM,PRON,PROPN,VERB">5497</feat><!-- þo, so, þizai, izai, managein, allai, sunjai, manageins, þeina, þos -->
+    <feat name="Gender" value="Fem,Masc" upos="ADJ,NOUN,NUM,PRON">368</feat><!-- izwis, jus, þrins, izwara, uns, tiguns, unsis, weis, ik, sik -->
+    <feat name="Gender" value="Fem,Neut" upos="ADJ,NOUN">8</feat><!-- malo, sunno, silbo, taihswo, waliso, wraiqo -->
+    <feat name="Gender" value="Masc" upos="ADJ,DET,NOUN,NUM,PRON,PROPN,VERB">16942</feat><!-- imma, izwis, ina, is, sa, im, mis, ik, Iesus, gudis -->
+    <feat name="Gender" value="Masc,Neut" upos="ADJ,DET,NOUN,NUM,PRON,PROPN,VERB">564</feat><!-- þamma, þis, unsaris, þize, seinamma, meinamma, unsar, unsaramma, ainamma, þeinamma -->
+    <feat name="Gender" value="Neut" upos="ADJ,DET,NOUN,NUM,PRON,PROPN,VERB">4703</feat><!-- þata, ƕa, þatei, þo, waurd, all, leika, andwairþja, leik, waiht -->
+    <feat name="Mood" value="Imp" upos="VERB">496</feat><!-- gagg, saiƕiþ, urreis, gaggam, galaubeiþ, let, usgagg, faginoþ, gaggiþ, gif -->
+    <feat name="Mood" value="Ind" upos="VERB">7486</feat><!-- ist, qaþ, was, warþ, qeþun, qiþa, sind, im, wairþiþ, qam -->
+    <feat name="Mood" value="Opt" upos="VERB">1414</feat><!-- sijai, wesi, wairþai, sijaiþ, wairþaiþ, sijaina, sijais, taujaiþ, habai, taujau -->
+    <feat name="Number" value="Dual" upos="PRON,VERB">45</feat><!-- gaggats, iggqis, igqis, qiþaits, bigitats, siju, taujats, uggkis, ugkis, wit -->
+    <feat name="Number" value="Plur" upos="ADJ,DET,NOUN,NUM,PRON,PROPN,VERB">11203</feat><!-- izwis, im, þai, þaim, jus, qeþun, þo, þans, uns, sind -->
+    <feat name="Number" value="Sing" upos="ADJ,DET,NOUN,NUM,PRON,PROPN,VERB">26554</feat><!-- ist, imma, qaþ, is, ina, þata, sa, mis, þamma, ik -->
+    <feat name="Person" value="1" upos="PRON,VERB">3082</feat><!-- mis, ik, mik, qiþa, uns, im, weis, meina, unsis, meinamma -->
+    <feat name="Person" value="2" upos="PRON,VERB">3403</feat><!-- izwis, jus, þus, þuk, þu, izwara, sijuþ, þeina, þeinamma, is -->
+    <feat name="Person" value="3" upos="PRON,VERB">8847</feat><!-- ist, imma, qaþ, ina, is, im, was, warþ, sik, qeþun -->
+    <feat name="Poss" value="Yes" upos="PRON">1157</feat><!-- seinamma, izwara, meina, meinamma, seinaim, þeinamma, seina, þeina, meinai, unsaris -->
+    <feat name="PronType" value="Int" upos="ADV,PRON">595</feat><!-- ƕa, niu, ƕas, ƕaiwa, ibai, u, duƕe, ƕan, ƕar, ƕaþro -->
+    <feat name="PronType" value="Prs" upos="PRON">5936</feat><!-- izwis, imma, ina, is, im, mis, ik, mik, jus, þus -->
+    <feat name="PronType" value="Rcp" upos="PRON">10</feat><!-- anþar, anþaris, anþarana -->
+    <feat name="PronType" value="Rel" upos="ADV,PRON">1140</feat><!-- saei, þatei, swaswe, þammei, þoei, þanei, þaiei, swe, sei, þarei -->
+    <feat name="Reflex" value="Yes" upos="PRON">596</feat><!-- sik, sis, seinamma, seinaim, seina, seinai, silban, silbin, seinana, seinans -->
+    <feat name="Strength" value="Strong" upos="ADJ,VERB">2988</feat><!-- qiþands, managai, andhafjands, anþar, gameliþ, dauþaim, gasaiƕands, qimands, wisands, habands -->
+    <feat name="Strength" value="Weak" upos="ADJ,VERB">2020</feat><!-- qiþandans, silba, habandans, silban, silbans, wisandans, gasaiƕandans, samo, gahausjandans, aiweinon -->
+    <feat name="Tense" value="Past" upos="VERB">4787</feat><!-- qaþ, was, warþ, qeþun, qam, galaiþ, wesun, andhof, rodida, gatawida -->
+    <feat name="Tense" value="Pres" upos="VERB">8137</feat><!-- ist, qiþa, sind, im, qiþands, wairþiþ, qiþiþ, habaiþ, qiþandans, sijai -->
+    <feat name="VerbForm" value="Fin" upos="VERB">9396</feat><!-- ist, qaþ, was, warþ, qeþun, qiþa, sind, im, wairþiþ, qam -->
+    <feat name="VerbForm" value="Inf" upos="VERB">853</feat><!-- wisan, taujan, galeiþan, qiman, qiþan, gaggan, wairþan, rodjan, saiƕan, giban -->
+    <feat name="VerbForm" value="Part" upos="VERB">2675</feat><!-- qiþands, qiþandans, andhafjands, gameliþ, gasaiƕands, habandans, qimands, wisands, habands, wisandans -->
+    <feat name="Voice" value="Act" upos="VERB">11922</feat><!-- ist, qaþ, was, warþ, qeþun, qiþa, sind, im, qiþands, wairþiþ -->
+    <feat name="Voice" value="Pass" upos="VERB">1002</feat><!-- gameliþ, skuld, haitada, gamelido, qiþan, atgiban, afletanda, afnimada, gabaurans, gamelid -->
+  </feats>
+  <!-- Statistics of universal dependency relations. -->
+  <deps unique="30">
+    <dep name="acl">883</dep>
+    <dep name="advcl">2643</dep>
+    <dep name="advmod">2622</dep>
+    <dep name="amod">881</dep>
+    <dep name="appos">692</dep>
+    <dep name="aux">71</dep>
+    <dep name="auxpass">2</dep>
+    <dep name="case">4801</dep>
+    <dep name="cc">5090</dep>
+    <dep name="ccomp">846</dep>
+    <dep name="conj">3216</dep>
+    <dep name="csubjpass">24</dep>
+    <dep name="dep">3</dep>
+    <dep name="det">1881</dep>
+    <dep name="discourse">1161</dep>
+    <dep name="dobj">3822</dep>
+    <dep name="iobj">3637</dep>
+    <dep name="mark">1802</dep>
+    <dep name="mwe">3</dep>
+    <dep name="name">137</dep>
+    <dep name="neg">1283</dep>
+    <dep name="nmod">7033</dep>
+    <dep name="nsubj">4538</dep>
+    <dep name="nsubjpass">194</dep>
+    <dep name="nummod">197</dep>
+    <dep name="parataxis">86</dep>
+    <dep name="remnant">330</dep>
+    <dep name="root">5450</dep>
+    <dep name="vocative">427</dep>
+    <dep name="xcomp">2373</dep>
+  </deps>
+</treebank>

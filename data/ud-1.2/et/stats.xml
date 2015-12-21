@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<treebank>
+  <!-- tokens means "surface tokens", e.g. Spanish "vámonos" counts as one token
+       words means "syntactic words", e.g. Spanish "vámonos" is split to two words, "vamos" and "nos"
+       fused is the number of tokens that are split to two or more syntactic words
+       The words and fused elements can be omitted if no token is split to smaller syntactic words. -->
+  <size>
+    <total><sentences>1315</sentences><tokens>9491</tokens><words>9491</words><fused>0</fused></total>
+  </size>
+  <lemmas unique="3627" /><!-- ., --, tema+0, Peeter+0, ja+0, ole+0, liiguta+s, mööda+0, mina+0, üle+0, poole+0, mees+0, ole+i, eesti+0, tõuka+s -->
+  <forms unique="3763" /><!-- ., ,, ta, Peeter, ja, liigutas, mööda, on, poole, üle, oli, ', Eesti, tõukas, viskus -->
+  <fusions unique="0" /><!--  -->
+  <!-- Statistics of universal POS tags. The comments with the most frequent lemmas are optional (but easy to obtain). -->
+  <tags unique="15">
+    <tag name="ADJ">480</tag><!-- suur+0, viimane+0, tugev+0, kogu+0, noor+0, parem+0, suur+st, valge+d, hingetu+ks, must+0 -->
+    <tag name="ADP">562</tag><!-- mööda+0, poole+0, üle+0, juurde+0, järele+0, läbi+0, vastu+0, peale+0, pealt+0, ümber+0 -->
+    <tag name="ADV">723</tag><!-- siis+0, ka+0, välja+0, edasi+0, maha+0, üles+0, eemale+0, pikali+0, nii+0, tagasi+0 -->
+    <tag name="AUX">96</tag><!-- ei+0, ole+i, ole+0, ole+id, pida+i, ole+in, või+b, pida+ks, saa+i, saa+ks -->
+    <tag name="CONJ">126</tag><!-- ja+0, aga+0, või+0, CO, ent+0, vaid+0, kuid+0, ning+0, ega+0, ehk+0 -->
+    <tag name="INTJ">3</tag><!-- no+0, kurat+0 -->
+    <tag name="NOUN">3029</tag><!-- mees+0, tuul+0, tuba+0, naine+0, kodu+0, laud+0, linn+0, uks+0, mets+0, poiss+0 -->
+    <tag name="NUM">121</tag><!-- kaks+0, kaks+st, 1992+0, pool+0, viis+0, kolm+0, kolmas+t, neli+0, paar+0, 1990+0 -->
+    <tag name="PART">20</tag><!-- noh+0, nigu+0, nagu+0, või+0, ei+0, hehe+0, hh+0, jaa+0, jah+0, mhmh+0 -->
+    <tag name="PRON">534</tag><!-- tema+0, mina+0, oma+0, tema+d, see+0, ise+0, mitu+0, mis+0, mina+d, kes+0 -->
+    <tag name="PROPN">605</tag><!-- Peeter+0, eesti+0, Palts+0, Arnold+0, Lennart+0, Savi_saar+0, Telia+0, Rüütel+0, Sõmera+0, Jaan+0 -->
+    <tag name="PUNCT">1512</tag><!-- ., --, punc, !, ,, ? -->
+    <tag name="SCONJ">82</tag><!-- kui+0, et+0, nagu+0, sest+0, kuigi+0, SUB, just-kui+0, kuna+0, kuni+0 -->
+    <tag name="VERB">1590</tag><!-- liiguta+s, ole+0, tõuka+s, visku+s, liiku+s, tatsa+s, ole+i, prantsata+s, sõiduta+s, tilku+s -->
+    <tag name="X">8</tag><!-- ATM+i, KGB+0, Mr+0, cm+0, km/h+0, pid, ta, viis -->
+  </tags>
+  <!-- Statistics of features and values. The comments with the most frequent word forms are optional (but easy to obtain). -->
+  <feats unique="58">
+    <feat name="Abbr" value="Yes" upos="X">5</feat><!-- ATMi, KGB, Mr, cm, km/h -->
+    <feat name="AdpType" value="Post" upos="ADP">417</feat><!-- poole, juurde, järele, mööda, peale, pealt, alla, eest, ette, vahele -->
+    <feat name="AdpType" value="Prep" upos="ADP">145</feat><!-- üle, mööda, läbi, vastu, koos, keset, ümber, pärast, enne, piki -->
+    <feat name="Case" value="Abe" upos="NOUN,VERB">3</feat><!-- aietuseta, informeerimata, kiirustamata -->
+    <feat name="Case" value="Abl" upos="ADJ,NOUN,NUM,PRON,PROPN">55</feat><!-- maalt, laevalt, Prantsusmaalt, katuselt, koosolekult, maalilt, näolt, põrandalt, sillalt, taldrikult -->
+    <feat name="Case" value="Add" upos="ADJ,NOUN,NUM,PRON,PROPN">179</feat><!-- koju, tuppa, linna, kööki, aeda, võssa, õhku, kaela, kaussi, lasteaeda -->
+    <feat name="Case" value="Ade" upos="ADJ,NOUN,NUM,PRON,PROPN">123</feat><!-- tal, õhtul, Marel, aastal, sünnipäeval, Toompeal, ajal, hommikul, igal, meil -->
+    <feat name="Case" value="All" upos="ADJ,NOUN,NUM,PRON,PROPN,VERB">204</feat><!-- põrandale, talle, kaldale, minema, endale, koerale, külalisele, maale, mulle, rinnale -->
+    <feat name="Case" value="Com" upos="ADP,NOUN,NUM,PRON,PROPN">144</feat><!-- koos, kividega, kiviga, jalaga, rattaga, sellega, Teliaga, autoga, isaga, jalgrattaga -->
+    <feat name="Case" value="Ela" upos="ADJ,ADP,NOUN,NUM,PRON,PROPN,VERB">276</feat><!-- hommikust, kahest, linnast, suurest, toast, trepist, voodist, hirmust, majast, pajast -->
+    <feat name="Case" value="Ess" upos="ADJ,NOUN,PRON">11</feat><!-- Ainsana, Intriigimeistrina, arreteerituina, esimesena, esindajatena, montöörina, naisena, paratamatusena, tablettidena, tegurina -->
+    <feat name="Case" value="Gen" upos="ADJ,ADP,NOUN,NUM,PRON,PROPN,X">1606</feat><!-- poole, üle, Eesti, juurde, järele, oma, läbi, ta, tema, laua -->
+    <feat name="Case" value="Ill" upos="ADJ,NOUN,NUM,PRON,PROPN,VERB">174</feat><!-- voodisse, vaatama, otsima, puhkama, võtma, ämbrisse, Tallinnasse, avama, jahtuma, kuivama -->
+    <feat name="Case" value="Ine" upos="ADJ,NOUN,NUM,PRON,PROPN,VERB">134</feat><!-- toas, elus, Vaikses, koridoris, korteris, külades, lumes, ookeanis, püüdmas, sadulas -->
+    <feat name="Case" value="Nom" upos="ADJ,ADP,NOUN,NUM,PRON,PROPN">1542</feat><!-- Peeter, ta, mees, tuul, nad, ma, mitu, Arnold, Lennart, see -->
+    <feat name="Case" value="Par" upos="ADJ,ADP,NOUN,NUM,PRON,PROPN">712</feat><!-- mööda, end, vett, vastu, mind, tundi, seda, keset, midagi, ust -->
+    <feat name="Case" value="Ter" upos="NOUN,NUM,PRON">24</feat><!-- õhtuni, kaheni, kaldani, kolmeni, korruseni, kroonini, mereni, omani, raamini, saareni -->
+    <feat name="Case" value="Tra" upos="ADJ,NOUN,PRON,PROPN">62</feat><!-- hingetuks, presidendiks, tühjaks, puhtaks, vigaseks, ajaks, kasuks, kildudeks, kontvõõraiks, vabaks -->
+    <feat name="Degree" value="Cmp" upos="ADJ">19</feat><!-- parema, parem, tugevam, vaiksemaks, enam, kaugema, paremad, paremaid, parematel, suurem -->
+    <feat name="Degree" value="Pos" upos="ADJ">437</feat><!-- suur, tugev, kogu, suurest, valged, viimase, hingetuks, musta, noor, raske -->
+    <feat name="Mood" value="Cnd" upos="AUX,VERB">11</feat><!-- saaks, oleks, peaks, asetuks, moodustaksid, sõidutataks, tõusnuks -->
+    <feat name="Mood" value="Imp" upos="VERB">2</feat><!-- Sõiduta, Vala -->
+    <feat name="Mood" value="Ind" upos="AUX,VERB">1429</feat><!-- liigutas, on, oli, tõukas, viskus, liikus, tatsas, prantsatas, sõidutas, tilkus -->
+    <feat name="Mood" value="Qot" upos="VERB">2</feat><!-- olevat, tilkuvat -->
+    <feat name="NameType" value="Nat" upos="ADJ">2</feat><!-- prantsuse, tšuktši -->
+    <feat name="Negative" value="Neg" upos="AUX,VERB">59</feat><!-- ei, ole, pole, saa, saaks, tea, aimagi, jää, kutsutud, lahku -->
+    <feat name="Negative" value="Pos" upos="AUX,VERB">1413</feat><!-- liigutas, on, oli, tõukas, viskus, liikus, tatsas, prantsatas, sõidutas, tilkus -->
+    <feat name="Number" value="Plur" upos="ADJ,AUX,NOUN,NUM,PRON,PROPN,VERB">857</feat><!-- nad, liikusid, mehed, sõitsid, sõitsime, olid, on, Sammusime, inimesed, käisid -->
+    <feat name="Number" value="Sing" upos="ADJ,AUX,NOUN,NUM,PRON,PROPN,VERB,X">5186</feat><!-- ta, Peeter, liigutas, on, oli, Eesti, tõukas, viskus, mees, tuul -->
+    <feat name="NumForm" value="Digit" upos="NUM">29</feat><!-- 1992., 1991., 100, 110, 120, 15.40, 1875, 1959., 1977, 1990 -->
+    <feat name="NumForm" value="Word" upos="ADJ,NUM">106</feat><!-- kaks, kahest, kolmandat, kahe, teise, neli, paar, kahte, kolmandale, kolme -->
+    <feat name="NumType" value="Card" upos="NUM">104</feat><!-- kaks, kahest, kahe, neli, paar, pool, kahte, kolme, kolmekümne, kuussada -->
+    <feat name="NumType" value="Ord" upos="ADJ,NUM">33</feat><!-- kolmandat, 1992., teise, 1991., kolmandale, teine, 1959., 1990., 2000.-2001., Esimene -->
+    <feat name="Person" value="1" upos="AUX,PRON,VERB">268</feat><!-- ma, mu, tormasin, mind, sõitsin, valasin, minu, sõitsime, ujusin, Sammusime -->
+    <feat name="Person" value="2" upos="AUX,PRON,VERB">25</feat><!-- sa, sind, sinu, su, Ronid, Sõiduta, Sõitsid, Vala, liigutasid, liikusid -->
+    <feat name="Person" value="3" upos="AUX,PRON,VERB">1366</feat><!-- ta, liigutas, on, oli, tõukas, viskus, liikus, tatsas, nad, prantsatas -->
+    <feat name="Poss" value="Yes" upos="PRON">101</feat><!-- oma, mitu, end, keegi, mõned, mõne, endale, endast, ennast, midagi -->
+    <feat name="PronType" value="Dem" upos="PRON">80</feat><!-- see, seda, selle, üks, samal, sellega, too, nende, sellesama, teise -->
+    <feat name="PronType" value="Ind,Neg" upos="PRON">60</feat><!-- mitu, keegi, midagi, mõned, mõne, mingisse, Muist, Teised, igasuguseid, kedagi -->
+    <feat name="PronType" value="Int" upos="PRON">8</feat><!-- mis, mitu, Kumb, kelle, kes, milline -->
+    <feat name="PronType" value="Prs" upos="PRON">330</feat><!-- ta, oma, nad, ma, tema, end, mu, mind, minu, talle -->
+    <feat name="PronType" value="Rcp" upos="PRON">1</feat><!-- üksteisele -->
+    <feat name="PronType" value="Rel" upos="PRON">29</feat><!-- mis, kes, mida, mille, kelle, kel, kellelt, millega -->
+    <feat name="PronType" value="Tot" upos="PRON">15</feat><!-- kõik, iga, igal, Mõlema, Mõlemad, igale, kõigi, kõikidest -->
+    <feat name="PunctType" value="Comm" upos="PUNCT">1</feat><!-- , -->
+    <feat name="PunctType" value="Excl" upos="PUNCT">2</feat><!-- ! -->
+    <feat name="PunctType" value="Peri" upos="PUNCT">1117</feat><!-- ., ... -->
+    <feat name="PunctType" value="Qest" upos="PUNCT">1</feat><!-- ? -->
+    <feat name="Reflex" value="Yes" upos="PRON">51</feat><!-- oma, end, endale, enda, endast, ennast, endaga, endal, endasse, enesest -->
+    <feat name="Tense" value="Imp" upos="AUX,VERB">1080</feat><!-- liigutas, oli, tõukas, viskus, liikus, tatsas, prantsatas, sõidutas, tilkus, valas -->
+    <feat name="Tense" value="Past" upos="AUX,VERB">52</feat><!-- liikunud, sisenenud, tormanud, liigutatud, roninud, sõudnud, tilkunud, tõusnud, viskunud, väljunud -->
+    <feat name="Tense" value="Pres" upos="AUX,VERB">363</feat><!-- on, tilgub, liigutab, tõuseb, tatsab, käib, tormab, tõukab, ujub, siseneb -->
+    <feat name="VerbForm" value="Fin" upos="AUX,VERB">1444</feat><!-- liigutas, on, oli, tõukas, viskus, liikus, tatsas, prantsatas, sõidutas, tilkus -->
+    <feat name="VerbForm" value="Ger" upos="VERB">14</feat><!-- arvates, hüpeldes, jättes, kavandades, laiutades, lubades, minnes, naeratades, näidates, saabudes -->
+    <feat name="VerbForm" value="Inf" upos="AUX,VERB">49</feat><!-- saada, teha, hakata, lugeda, müüa, nuusutada, pakkuda, toetada, aimata, astuda -->
+    <feat name="VerbForm" value="Part" upos="ADJ,ADV,AUX,VERB">114</feat><!-- liikunud, sisenenud, tormanud, tõusnud, Tilkuv, hingeldav, konkureeriva, kägardunud, liigutatud, lõppenud -->
+    <feat name="VerbForm" value="Sup" upos="VERB">100</feat><!-- minema, vaatama, otsima, puhkama, võtma, avama, jahtuma, kuivama, magama, tegema -->
+    <feat name="VerbType" value="Mod" upos="VERB">1</feat><!-- pean -->
+  </feats>
+  <!-- Statistics of universal dependency relations. -->
+  <deps unique="26">
+    <dep name="acl">41</dep>
+    <dep name="advcl">134</dep>
+    <dep name="advmod">608</dep>
+    <dep name="advmod:emph">7</dep>
+    <dep name="amod">406</dep>
+    <dep name="aux">68</dep>
+    <dep name="case">561</dep>
+    <dep name="cc">159</dep>
+    <dep name="ccomp">29</dep>
+    <dep name="compound">17</dep>
+    <dep name="compound:prt">169</dep>
+    <dep name="conj">143</dep>
+    <dep name="cop">40</dep>
+    <dep name="csubj">10</dep>
+    <dep name="dep">9</dep>
+    <dep name="dobj">572</dep>
+    <dep name="iobj">1</dep>
+    <dep name="mark">67</dep>
+    <dep name="neg">27</dep>
+    <dep name="nmod">2345</dep>
+    <dep name="nsubj">1191</dep>
+    <dep name="nummod">31</dep>
+    <dep name="nummod:gov">18</dep>
+    <dep name="punct">1511</dep>
+    <dep name="root">1315</dep>
+    <dep name="xcomp">12</dep>
+  </deps>
+</treebank>
