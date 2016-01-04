@@ -30,7 +30,7 @@ for arg in sys.argv[1:]:
         for i in range(max(len(sentence_gold), len(sentence_system))):
             gold_form = sentence_gold[i].form if i < len(sentence_gold) else None
             system_form = sentence_system[i].form if i < len(sentence_system) else None
-            if gold_form != system_form:
+            if gold_form != system_form and system_form != "#OOV":
                 raise Exception("Forms '{}' from gold file {} and '{}' from corresponding system file do not match".format(str(gold_form), arg, str(system_form)))
 
             total += 1

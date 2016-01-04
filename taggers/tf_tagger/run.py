@@ -55,6 +55,9 @@ class TrainingManager(object):
 
         Returns: bool, whether the training should continue
         """
+        if self.mb_done >= 400:
+            return False
+
         if self.mb_done < min_mb_done:
             return True
         else:
@@ -141,8 +144,8 @@ def eval_tagger(tagger, batches):
 def compute_accuracy(mb_y, mb_y_hat):
     """Compaute accuracy of classification given the predicted and true labels."""
     eq = mb_y == mb_y_hat
-    n_correct = eq[mb_y != -1].sum()
-    n_total = (mb_y != -1).sum()
+    n_correct = eq[mb_y != 0].sum()
+    n_total = (mb_y != 0).sum()
 
     return n_correct * 1.0 / n_total
 
@@ -164,8 +167,10 @@ def main(args):
             num_steps=args.max_sentence_length)
 
     if not args.skip_train:
-        batches_train = train_data.prepare_batches(args.batch_size)
-        batches_dev = dev_data.prepare_batches(args.batch_size)
+        batches_train = train_data.prepare_batches(
+                args.batch_size, args.max_sentence_length, args.max_word_length)
+        batches_dev = dev_data.prepare_batches(
+                args.batch_size, args.max_sentence_length, args.max_word_length)
 
         train_mgr = TrainingManager(
             n_train_batches=len(batches_train),
@@ -187,7 +192,7 @@ def main(args):
 
             train_mgr.tick(mb_loss=mb_loss)
 
-    run_tagger_and_writeout(tagger)
+    run_tagger_and_writeout(tagger, dev_data)
 
 
 def run_tagger_and_writeout(tagger, dev_data):
@@ -223,7 +228,7 @@ if __name__ == '__main__':
                         help='Probablity of a word of frequency 1 to be sampled as an OOV.')
     parser.add_argument('--word-embedding-size', default=128, type=int,
                         help='Dimension of word-level word embedding.')
-    parser.add_argument('--char-embedding-size', default=128, type=int,
+    parser.add_argument('--char-embedding-size', default=16, type=int,
                         help='Dimension of character-level word embedding.')
     parser.add_argument('--max-sentence-length', default=50, type=int,
                         help='Maximum sentence length during training.')

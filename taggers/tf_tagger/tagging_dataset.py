@@ -45,25 +45,22 @@ class TaggingDataset(object):
 
         return d1, d2
 
-    def prepare_batches(self, n_seqs_per_batch=-1):
+    def prepare_batches(self, batch_size, max_seq_len, max_word_len):
         """Return a list of minibatches created out of the dataset.
 
         Args:
-            n_seqs_per_batch: how many sequences should each minibatch contain?
+            batch_size: how many sequences should each minibatch contain?
         """
         res = []
 
-        if n_seqs_per_batch == -1:
-            n_seqs_per_batch = len(self.seqs)
-
-        n_batches = int(math.ceil(len(self.seqs) * 1.0 / n_seqs_per_batch))
+        n_batches = int(math.ceil(len(self.seqs) / float(batch_size)))
         for seq_id in range(n_batches):
-            batch = self.seqs[seq_id * n_seqs_per_batch:(seq_id + 1) * n_seqs_per_batch]
-            res.append(self._batch_to_numpy(batch))
+            batch = self.seqs[seq_id * batch_size:(seq_id + 1) * batch_size]
+            res.append(self._batch_to_numpy(batch, max_seq_len, max_word_len, batch_size))
 
         return res
 
-    def _batch_to_numpy(self, batch, max_seq_len=30, max_word_len=20, batch_size=50):
+    def _batch_to_numpy(self, batch, max_seq_len, max_word_len, batch_size):
         """
         Convert given minibatch to numpy arrays with appropriate padding
         After this, the vocabulary indices are shifted by one where the
@@ -82,7 +79,7 @@ class TaggingDataset(object):
             res_x[i, :min(len(words), max_seq_len)] = words[:min(len(words), max_seq_len)]
             res_y[i, :min(len(tags), max_seq_len)] = tags[:min(len(tags), max_seq_len)]
 
-            for j in range(min(len(words), max_seq_len)):                
+            for j in range(min(len(words), max_seq_len)):
                 res_c[i, j, :min(len(chars[j]), max_word_len)] = chars[j][:min(len(chars[j]), max_word_len)]
 
 

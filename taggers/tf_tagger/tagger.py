@@ -31,6 +31,9 @@ class Tagger(object):
 
         """
 
+        self.num_steps = num_steps
+        self.num_chars = num_chars
+
         self.word_embedding_size = word_embedding_size
         self.char_embedding_size = char_embedding_size
 
@@ -47,8 +50,12 @@ class Tagger(object):
         self.tags = tf.placeholder(tf.int32, [None, num_steps])
         self.dropout_prob = tf.placeholder(tf.float32, [1])
 
+        # TODO change dimension when BasicLSTMCell is replaced
+        self.forward_initial_state = tf.placeholder(tf.float32, [None, 2 * lstm_size])
+        self.backward_initial_state = tf.placeholder(tf.float32, [None, 2* lstm_size])
 
-        self.char_embeddings = tf.Variable(tf.random_uniform([len(alphabet), char_embedding_size], -1.0, 1.0))
+        self.char_embeddings = \
+            tf.Variable(tf.random_uniform([len(alphabet), char_embedding_size], -1.0, 1.0))
         self.ce_lookup = tf.nn.embedding_lookup(self.char_embeddings, self.characters)
 
         self.embeddings = tf.Variable(tf.random_uniform([len(vocab), word_embedding_size], -1.0, 1.0))
@@ -76,18 +83,12 @@ class Tagger(object):
         self.last_char_lstm_state = tf.split(1, 2, self.char_states[num_chars - 1])[1]
         self.last_char_lstm_state_rev = tf.split(1, 2, self.char_states_rev[num_chars - 1])[1]
 
-        self.last_char_states = tf.reshape(self.last_char_lstm_state, [-1, num_steps, char_embedding_size], name="reshape-charstates")
+        self.last_char_states = \
+            tf.reshape(self.last_char_lstm_state, [-1, num_steps, char_embedding_size],
+                       name="reshape-charstates")
         self.last_char_states_rev = tf.reshape(self.last_char_lstm_state_rev, [-1, num_steps, char_embedding_size], name="reshape-charstates_rev")
 
         self.char_output = tf.concat(2, [self.last_char_states, self.last_char_states_rev])
-
-        ### input has 960,000 values which is not 48,000
-        # ==> concat(1, char_outputs_bidi) ma 960000 hodnot
-        # je to num_char-krat vic
-        # nezajima nas cely pole char_outputs, zajima nas posledni hodnota. a mozna i posledni hodnota stavu, ne outputu
-
-#        self.char_output = tf.reshape( self.char_bidi_state, [batch_size, num_steps, 2 * char_embedding_size], name="reshape-char_outputs_bidi")
-
 
         # inputs : seznam nakrajenej jako maslo
         self.inputs = [tf.squeeze(input_, [1]) for input_ in tf.split(1, num_steps, tf.concat(2, [self.char_output, self.e_lookup]))]
@@ -96,19 +97,23 @@ class Tagger(object):
             self.lstm = rnn_cell.BasicLSTMCell(lstm_size)
             self.outputs, self.states = rnn.rnn(
                     cell=self.lstm,
-                    inputs=self.inputs, dtype=tf.float32)#,
+                    inputs=self.inputs, dtype=tf.float32,
+                    initial_state=self.forward_initial_state)#,
                     #sequence_length=self.sentence_lengths)
 
         with tf.variable_scope('backward'):
             self.lstm_rev = rnn_cell.BasicLSTMCell(lstm_size)
             self.outputs_rev, self.states_rev = rnn.rnn(
                     cell=self.lstm_rev,
-                    inputs=list(reversed(self.inputs)), dtype=tf.float32)#,
+                    inputs=list(reversed(self.inputs)), dtype=tf.float32,
+                    initial_state=self.backward_initial_state)
 
         self.outputs_bidi = \
                 [tf.concat(1, [o1, o2]) for o1, o2 in zip(self.outputs, reversed(self.outputs_rev))]
 
-        self.output = tf.reshape(tf.concat(1, self.outputs_bidi), [-1, 2 * self.lstm_size], name="reshape-outputs_bidi")
+        self.output = \
+            tf.reshape(tf.concat(1, self.outputs_bidi), [-1, 2 * self.lstm_size],
+                       name="reshape-outputs_bidi")
 
 #        self.output = tf.nn.dropout(self.output, self.dropout_prob[0])
 
@@ -140,11 +145,23 @@ class Tagger(object):
         self.session = tf.Session()
         self.session.run(tf.initialize_all_variables())
 
+        tf.train.SummaryWriter("logs", self.session.graph_def)
+
 
     def learn(self, words, chars, tags, lengths):
         """Learn from the given minibatch."""
 
-        fd = {self.words:words, self.characters:chars, self.tags:tags, self.sentence_lengths: lengths, self.dropout_prob: np.array([0.5])}
+        initial_state = np.zeros([words.shape[0], 2 * self.lstm_size])
+
+        fd = {
+            self.words:words,
+            self.characters:chars,
+            self.tags:tags,
+            self.sentence_lengths: lengths,
+            self.dropout_prob: np.array([0.5]),
+            self.forward_initial_state: initial_state,
+            self.backward_initial_state: initial_state
+        }
         _, cost = self.session.run([self.train, self.cost], feed_dict=fd)
 
         return cost
@@ -153,12 +170,48 @@ class Tagger(object):
     def predict(self, words, chars, lengths):
         """Predict tags for the given minibatch."""
 
+        initial_state = np.zeros([words.shape[0], 2 * self.lstm_size])
+
         logits = self.session.run(self.logits,
-                feed_dict={self.words: words, self.characters: chars, self.sentence_lengths: lengths, self.dropout_prob: np.array([1])})
+                feed_dict={
+                    self.words: words,
+                    self.characters: chars,
+                    self.sentence_lengths: lengths,
+                    self.dropout_prob: np.array([1]),
+                    self.forward_initial_state: initial_state,
+                    self.backward_initial_state: initial_state
+                })
 
         return np.argmax(logits, axis=2)
 
     def tag_single_sentence(self, words, chars):
         """Tags a sentence of arbitrary length."""
 
-        pass
+        initial_state = np.zeros([1, 2 * self.lstm_size])
+        backward_initial_state = np.zeros([1, 2 * self.lstm_size])
+
+        tags = []
+        for start in xrange(0, len(words), self.num_steps):
+            w = np.zeros((1, self.num_steps), dtype='int32')
+            for i, w_id in enumerate(words[start:start+self.num_steps]):
+                w[0, i] = w_id
+            c = np.zeros((1, self.num_steps, self.num_chars), dtype='int32')
+            for i, chared_word in enumerate(chars[start:start+self.num_steps]):
+                for j, c_id in enumerate(chared_word[:self.num_chars]):
+                    c[0, i, j] = c_id
+
+            logits, state = self.session.run([self.logits, self.states[-1]],
+                feed_dict={
+                    self.words: w,
+                    self.characters: c,
+                    self.sentence_lengths: [self.num_steps],
+                    self.dropout_prob: np.array([1]),
+                    self.forward_initial_state: initial_state,
+                    self.backward_initial_state: backward_initial_state
+                })
+            # print >> sys.stderr, state.shape
+            # print >> sys.stderr, state
+            initial_state = state
+            tags.extend(np.argmax(logits[0], axis=1))
+
+        return [int(x) for x in tags[:len(words)]]
