@@ -187,7 +187,8 @@ def main(args):
                 permuted_batches = batches_train[:]
                 random.shuffle(permuted_batches)
             words, chars, tags, lengths = permuted_batches.pop()
-            words = np.where(lambda x: train_data.vocab.count(x) == 1 and np.random() < args.oov_sampling_p, np.zeros(words.shape), words)
+            oov_mask = np.vectorize(lambda x: train_data.vocab.count(x) == 1 and np.random.uniform() < args.oov_sampling_p)(words)
+            words = np.where(oov_mask, np.zeros(words.shape), words)
             mb_loss = tagger.learn(words, chars, tags, lengths)
 
             train_mgr.tick(mb_loss=mb_loss)
