@@ -159,7 +159,8 @@ def main(args):
             word_embedding_size=args.word_embedding_size,
             char_embedding_size=args.char_embedding_size,
             num_chars=args.max_word_length,
-            num_steps=args.max_sentence_length)
+            num_steps=args.max_sentence_length,
+            optimizer_desc=args.optimizer)
 
     if not args.skip_train:
         batches_train = train_data.prepare_batches(
@@ -246,8 +247,8 @@ if __name__ == '__main__':
                         help='Maximum sentence length during training.')
     parser.add_argument('--max-word-length', default=20, type=int,
                         help='Maximum word length during training.')
-    parser.add_argument("--optimizer", default=None, type=str,
-                        help="Optimizer specification to be specified.")
+    parser.add_argument('--optimizer', default='AdamOptimizer(1e-4)', type=str,
+                        help='Optimizer specified as class constructor from tf.train module.')
     args = parser.parse_args()
 
     main(args)

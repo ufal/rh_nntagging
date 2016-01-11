@@ -7,8 +7,8 @@ from tensorflow.models.rnn import rnn_cell, rnn, seq2seq
 class Tagger(object):
     """LSTM tagger model."""
     def __init__(self, vocab, tagset, alphabet, word_embedding_size,
-                 char_embedding_size, num_chars, num_steps,
-                 write_summaries=False):
+                 char_embedding_size, num_chars, num_steps, optimizer_desc,
+                 seed=None, write_summaries=False):
         """
         Builds the tagger computation graph and initializes it in a TensorFlow
         session.
@@ -29,6 +29,8 @@ class Tagger(object):
             num_chars: Maximum length of a word.
 
             num_steps: Maximum lenght of a sentence.
+
+            optimizer_desc: Description of the optimizer
 
             write_summaries: Write summaries using TensorFlow interface.
         """
@@ -149,7 +151,7 @@ class Tagger(object):
             num_decoder_symbols=len(tagset))
         self.cost = tf.reduce_mean(self.loss)
 
-        self.optimizer = tf.train.AdamOptimizer(1e-4)
+        self.optimizer = eval('tf.train.' + optimizer_desc)
         self.train = self.optimizer.minimize(self.cost)
 
         self.session = tf.Session()
