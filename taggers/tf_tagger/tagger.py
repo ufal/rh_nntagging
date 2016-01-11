@@ -56,6 +56,7 @@ class Tagger(object):
         self.sentence_lengths = tf.placeholder(tf.int64, [None])
         self.tags = tf.placeholder(tf.int32, [None, num_steps])
         self.dropout_prob = tf.placeholder(tf.float32, [1])
+        self.generate_lemmas = generate_lemmas
 
         input_list = []
 
@@ -152,7 +153,8 @@ class Tagger(object):
 
         if generate_lemmas:
             with tf.variable_scope('decoder'):
-                self.lemma_chars = tf.placeholder(tf.int32, [None, num_steps, num_chars], name='lemma_chars')
+                self.lemma_chars = tf.placeholder(tf.int32, [None, num_steps, num_chars + 2],
+                                                  name='lemma_chars')
 
                 lemma_state_size = self.lstm_size
 
@@ -163,9 +165,10 @@ class Tagger(object):
                 lemma_char_embeddings = tf.Variable(tf.random_uniform([len(alphabet), lemma_state_size], -0.5, 0.5),
                                                     name="char_embeddings")
 
-                lemma_char_inputs = [tf.squeeze(input_, [1]) for input_ in
-                                     tf.split(1, num_chars, tf.reshape(self.lemma_chars, [-1, num_chars],
-                                                                       name="reshape-lemma_char_inputs"))]
+                lemma_char_inputs = \
+                    [tf.squeeze(input_, [1]) for input_ in
+                        tf.split(1, num_chars + 2, tf.reshape(self.lemma_chars, [-1, num_chars + 2],
+                                                              name="reshape-lemma_char_inputs"))]
 
                 def loop(prev_state, _):
                     # it takes the previous hidden state, finds the character and formats it
@@ -182,8 +185,9 @@ class Tagger(object):
                 lemma_outputs_train, _ = seq2seq.rnn_decoder(embedded_lemma_characters, output, decoder_cell)
 
                 tf.get_variable_scope().reuse_variables()
-                lemma_outputs_runtime, _ = seq2seq.rnn_decoder(embedded_lemma_characters, output, decoder_cell,
-                                                               loop_function=loop)
+                lemma_outputs_runtime, _ = \
+                        seq2seq.rnn_decoder(embedded_lemma_characters, output, decoder_cell,
+                                            loop_function=loop)
 
                 lemma_char_logits = []
                 for output_train in lemma_outputs_train:
@@ -214,7 +218,7 @@ class Tagger(object):
             self.summary_writer = tf.train.SummaryWriter("logs", self.session.graph_def)
 
 
-    def learn(self, words, chars, tags, lengths):
+    def learn(self, words, chars, tags, lengths, lemma_chars):
         """Learn from the given minibatch."""
 
         initial_state = np.zeros([words.shape[0], 2 * self.lstm_size])
@@ -228,6 +232,7 @@ class Tagger(object):
         }
         if self.word_embedding_size: fd[self.words] = words
         if self.char_embedding_size: fd[self.chars] = chars
+        if self.generate_lemmas: fd[self.lemma_chars] = lemma_chars
 
         _, cost = self.session.run([self.train, self.cost], feed_dict=fd)
 

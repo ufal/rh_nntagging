@@ -73,19 +73,23 @@ class TaggingDataset(object):
         res_x = np.zeros((batch_size, max_seq_len), dtype='int32')
         res_c = np.zeros((batch_size, max_seq_len, max_word_len), dtype='int32')
         res_y = np.zeros((batch_size, max_seq_len), dtype='int32')
+        # this + 2 in lemma characters is for the special start and end symbols
+        res_lemma_c = np.zeros((batch_size, max_seq_len, max_word_len + 2), dtype='int32')
         lengths = np.zeros((batch_size), dtype='int64')
 
-        for i, (words, chars, tags) in enumerate(batch):
+        for i, (words, chars, tags, lemma_chars) in enumerate(batch):
             res_x[i, :min(len(words), max_seq_len)] = words[:min(len(words), max_seq_len)]
             res_y[i, :min(len(tags), max_seq_len)] = tags[:min(len(tags), max_seq_len)]
 
             for j in range(min(len(words), max_seq_len)):
                 res_c[i, j, :min(len(chars[j]), max_word_len)] = chars[j][:min(len(chars[j]), max_word_len)]
+                res_lemma_c[i, j, :min(len(chars[j]), max_word_len + 2)] = \
+                        chars[j][:min(len(chars[j]), max_word_len + 2 )]
 
 
             lengths[i] = len(words)
 
-        return res_x, res_c, res_y, lengths
+        return res_x, res_c, res_y, lengths, res_lemma_c
 
     @staticmethod
     def load_from_file(fname, vocab=None, alphabet=None, tags=None):
@@ -99,16 +103,19 @@ class TaggingDataset(object):
             words = []
             tags = []
             chars = []
+            lemma_chars = []
 
             for word in sentence:
-                word_id, char_ids, tag_id = TaggingDataset.get_word_and_tag_id(word, vocab, alphabet, tagset,
-                                                                     learn_vocab, learn_tags)
+                word_id, char_ids, tag_id, lemma_char_ids = \
+                        TaggingDataset.get_word_and_tag_id(word, vocab, alphabet, tagset,
+                                                           learn_vocab, learn_tags)
 
                 words.append(word_id)
                 chars.append(char_ids)
                 tags.append(tag_id)
+                lemma_chars.append(lemma_char_ids)
 
-            seqs.append((words, chars, tags))
+            seqs.append((words, chars, tags, lemma_chars))
 
         res = TaggingDataset(seqs, vocab, alphabet, tagset)
 
@@ -144,18 +151,21 @@ class TaggingDataset(object):
     def get_word_and_tag_id(word, vocab, alphabet, tags, learn_vocab, learn_tags):
         word_text = TaggingDataset.word_obj_to_str(word)
         chars = list(word_text)
+        lemma_chars = ["<w>"]+list(word.lemma)+["</w>"]
 
         if learn_vocab:
             word_id = vocab.add(word_text)
             char_ids = [alphabet.add(char) for char in chars]
+            lemma_char_ids = [alphabet.add(char) for char in lemma_chars]
         else:
             word_id = vocab.get(word_text, vocab['#OOV'])
             char_ids = [alphabet.get(char, alphabet['#OOA']) for char in chars]
+            lemma_char_ids = [alphabet.get(char, alphabet['#OOA']) for char in lemma_chars]
         if learn_tags:
             tag_id = tags.add(word.upos)
         else:
             tag_id = tags[word.upos]
-        return word_id, char_ids, tag_id
+        return word_id, char_ids, tag_id, lemma_char_ids
 
 
 def main(fname, split, dont_shuffle, fout1, fout2):

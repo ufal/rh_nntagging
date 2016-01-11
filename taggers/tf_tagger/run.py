@@ -113,7 +113,7 @@ class TrainingManager(object):
 
 def taste_tagger(tagger, batches):
     """Print out first 3 examples of the first batch tagged by the model."""
-    mb_x, chars, mb_y, lengths = batches[0]
+    mb_x, chars, mb_y, lengths, _ = batches[0]
     mb_y_hat = tagger.predict(mb_x, chars, lengths)
 
     for x, y, y_hat in zip(mb_x, mb_y, mb_y_hat)[:3]:
@@ -127,7 +127,7 @@ def eval_tagger(tagger, batches):
     """Evaluate the tagger on the given data."""
     acc_total = 0.0
     acc_cnt = 0
-    for mb_x, chars, mb_y, lengths in batches:
+    for mb_x, chars, mb_y, lengths, _ in batches:
         mb_y_hat = tagger.predict(mb_x, chars, lengths)
 
         acc_total += compute_accuracy(mb_y, mb_y_hat)
@@ -192,10 +192,10 @@ def main(args):
             if not permuted_batches:
                 permuted_batches = batches_train[:]
                 random.shuffle(permuted_batches)
-            words, chars, tags, lengths = permuted_batches.pop()
+            words, chars, tags, lengths, lemma_chars = permuted_batches.pop()
             oov_mask = np.vectorize(lambda x: train_data.vocab.count(x) == 1 and np.random.uniform() < args.oov_sampling_p)(words)
             words = np.where(oov_mask, np.zeros(words.shape), words)
-            mb_loss = tagger.learn(words, chars, tags, lengths)
+            mb_loss = tagger.learn(words, chars, tags, lengths, lemma_chars)
 
             train_mgr.tick(mb_loss=mb_loss, force_eval=force_eval["value"])
             force_eval["value"] = False
