@@ -46,53 +46,63 @@ class Tagger(object):
         self.tagset = tagset
         self.alphabet = alphabet
 
-        self.characters = tf.placeholder(tf.int32, [None, num_steps, num_chars], name='characters')
-        self.words = tf.placeholder(tf.int32, [None, num_steps], name='words')
+        self.forward_initial_state = tf.placeholder(tf.float32, [None, rnn_cell.BasicLSTMCell(lstm_size).state_size])
+        self.backward_initial_state = tf.placeholder(tf.float32, [None, rnn_cell.BasicLSTMCell(lstm_size).state_size])
         self.sentence_lengths = tf.placeholder(tf.int64, [None])
         self.tags = tf.placeholder(tf.int32, [None, num_steps])
         self.dropout_prob = tf.placeholder(tf.float32, [1])
 
-        self.forward_initial_state = tf.placeholder(tf.float32, [None, rnn_cell.BasicLSTMCell(lstm_size).state_size])
-        self.backward_initial_state = tf.placeholder(tf.float32, [None, rnn_cell.BasicLSTMCell(lstm_size).state_size])
+        self.input_list = []
 
-        self.char_embeddings = \
-            tf.Variable(tf.random_uniform([len(alphabet), char_embedding_size], -1.0, 1.0))
-        self.ce_lookup = tf.nn.embedding_lookup(self.char_embeddings, self.characters)
+        # Character-level embeddings
+        if char_embedding_size:
+            self.characters = tf.placeholder(tf.int32, [None, num_steps, num_chars], name='characters')
 
-        self.embeddings = tf.Variable(tf.random_uniform([len(vocab), word_embedding_size], -1.0, 1.0))
-        self.e_lookup = tf.nn.embedding_lookup(self.embeddings, self.words)
+            self.char_embeddings = \
+                tf.Variable(tf.random_uniform([len(alphabet), char_embedding_size], -1.0, 1.0))
+            self.ce_lookup = tf.nn.embedding_lookup(self.char_embeddings, self.characters)
 
-        self.char_inputs = \
-            [tf.squeeze(input_, [1]) for input_ in
-                    tf.split(1, num_chars, tf.reshape(self.ce_lookup,
-                        [-1, num_chars, char_embedding_size], name="reshape-char_inputs"))]
-                         # ^^ -1 = batch_size * num_steps
+            self.char_inputs = \
+                [tf.squeeze(input_, [1]) for input_ in
+                        tf.split(1, num_chars, tf.reshape(self.ce_lookup,
+                            [-1, num_chars, char_embedding_size], name="reshape-char_inputs"))]
+                             # ^^ -1 = batch_size * num_steps
 
-        with tf.variable_scope('char_forward'):
-            self.char_lstm = rnn_cell.BasicLSTMCell(char_embedding_size)
-            self.char_outputs, self.char_states = rnn.rnn(
-                cell=self.char_lstm,
-                inputs=self.char_inputs, dtype=tf.float32)
-                #initial_state=self.char_lstm.zero_state(-1, tf.float32))
+            with tf.variable_scope('char_forward'):
+                self.char_lstm = rnn_cell.BasicLSTMCell(char_embedding_size)
+                self.char_outputs, self.char_states = rnn.rnn(
+                    cell=self.char_lstm,
+                    inputs=self.char_inputs, dtype=tf.float32)
+                    #initial_state=self.char_lstm.zero_state(-1, tf.float32))
 
-        with tf.variable_scope('char_backward'):
-            self.char_lstm_rev = rnn_cell.BasicLSTMCell(char_embedding_size)
-            self.char_outputs_rev, self.char_states_rev = rnn.rnn(
-                cell=self.char_lstm_rev,
-                inputs=list(reversed(self.char_inputs)), dtype=tf.float32)
+            with tf.variable_scope('char_backward'):
+                self.char_lstm_rev = rnn_cell.BasicLSTMCell(char_embedding_size)
+                self.char_outputs_rev, self.char_states_rev = rnn.rnn(
+                    cell=self.char_lstm_rev,
+                    inputs=list(reversed(self.char_inputs)), dtype=tf.float32)
 
-        self.last_char_lstm_state = tf.split(1, 2, self.char_states[num_chars - 1])[1]
-        self.last_char_lstm_state_rev = tf.split(1, 2, self.char_states_rev[num_chars - 1])[1]
+            self.last_char_lstm_state = tf.split(1, 2, self.char_states[num_chars - 1])[1]
+            self.last_char_lstm_state_rev = tf.split(1, 2, self.char_states_rev[num_chars - 1])[1]
 
-        self.last_char_states = \
-            tf.reshape(self.last_char_lstm_state, [-1, num_steps, char_embedding_size],
-                       name="reshape-charstates")
-        self.last_char_states_rev = tf.reshape(self.last_char_lstm_state_rev, [-1, num_steps, char_embedding_size], name="reshape-charstates_rev")
+            self.last_char_states = \
+                tf.reshape(self.last_char_lstm_state, [-1, num_steps, char_embedding_size],
+                           name="reshape-charstates")
+            self.last_char_states_rev = tf.reshape(self.last_char_lstm_state_rev, [-1, num_steps, char_embedding_size], name="reshape-charstates_rev")
 
-        self.char_output = tf.concat(2, [self.last_char_states, self.last_char_states_rev])
+            self.char_output = tf.concat(2, [self.last_char_states, self.last_char_states_rev])
 
-        # inputs : seznam nakrajenej jako maslo
-        self.inputs = [tf.squeeze(input_, [1]) for input_ in tf.split(1, num_steps, tf.concat(2, [self.char_output, self.e_lookup]))]
+            self.input_list.append(self.char_output)
+
+        # Word-level embeddings
+        if word_embedding_size:
+            self.words = tf.placeholder(tf.int32, [None, num_steps], name='words')
+            self.embeddings = tf.Variable(tf.random_uniform([len(vocab), word_embedding_size], -1.0, 1.0))
+            self.e_lookup = tf.nn.embedding_lookup(self.embeddings, self.words)
+
+            self.input_list.append(self.e_lookup)
+
+        # All inputs correctly sliced
+        self.inputs = [tf.squeeze(input_, [1]) for input_ in tf.split(1, num_steps, tf.concat(2, self.input_list))]
 
         with tf.variable_scope('forward'):
             self.lstm = rnn_cell.BasicLSTMCell(lstm_size)
@@ -118,7 +128,7 @@ class Tagger(object):
 
 #        self.output = tf.nn.dropout(self.output, self.dropout_prob[0])
 
-        # We are computing only the logits, not teh actual softmax -- while
+        # We are computing only the logits, not the actual softmax -- while
         # computing the loss, it is done by the sequence_loss_by_example and
         # during the runtime classification, the argmax over logits is enough.
 
@@ -131,7 +141,6 @@ class Tagger(object):
 
         # output maks: compute loss only if it insn't a padded word (i.e. zero index)
         output_mask = tf.reshape(tf.to_float(tf.not_equal(self.tags, 0)), [-1])
-        #output_mask = tf.reshape(tf.to_float(tf.greater_equal(self.tags, 0)), [-1])
 
         self.loss = seq2seq.sequence_loss_by_example(
             logits=[self.logits_flatten],
@@ -157,14 +166,15 @@ class Tagger(object):
         initial_state = np.zeros([words.shape[0], 2 * self.lstm_size])
 
         fd = {
-            self.words:words,
-            self.characters:chars,
             self.tags:tags,
             self.sentence_lengths: lengths,
             self.dropout_prob: np.array([0.5]),
             self.forward_initial_state: initial_state,
             self.backward_initial_state: initial_state
         }
+        if self.word_embedding_size: fd[self.words] = words
+        if self.char_embedding_size: fd[self.characters] = chars
+
         _, cost = self.session.run([self.train, self.cost], feed_dict=fd)
 
         return cost
@@ -175,15 +185,16 @@ class Tagger(object):
 
         initial_state = np.zeros([words.shape[0], 2 * self.lstm_size])
 
-        logits = self.session.run(self.logits,
-                feed_dict={
-                    self.words: words,
-                    self.characters: chars,
-                    self.sentence_lengths: lengths,
-                    self.dropout_prob: np.array([1]),
-                    self.forward_initial_state: initial_state,
-                    self.backward_initial_state: initial_state
-                })
+        fd = {
+            self.sentence_lengths: lengths,
+            self.dropout_prob: np.array([1]),
+            self.forward_initial_state: initial_state,
+            self.backward_initial_state: initial_state
+        }
+        if self.word_embedding_size: fd[self.words] = words
+        if self.char_embedding_size: fd[self.characters] = chars
+
+        logits = self.session.run(self.logits, feed_dict=fd)
 
         return np.argmax(logits, axis=2)
 
@@ -203,17 +214,17 @@ class Tagger(object):
                 for j, c_id in enumerate(chared_word[:self.num_chars]):
                     c[0, i, j] = c_id
 
-            logits, state = self.session.run([self.logits, self.states[-1]],
-                feed_dict={
-                    self.words: w,
-                    self.characters: c,
-                    self.sentence_lengths: [self.num_steps],
-                    self.dropout_prob: np.array([1]),
-                    self.forward_initial_state: initial_state,
-                    self.backward_initial_state: backward_initial_state
-                })
-            # print >> sys.stderr, state.shape
-            # print >> sys.stderr, state
+            fd = {
+                self.sentence_lengths: [self.num_steps],
+                self.dropout_prob: np.array([1]),
+                self.forward_initial_state: initial_state,
+                self.backward_initial_state: backward_initial_state
+            }
+            if self.word_embedding_size: fd[self.words] = w
+            if self.char_embedding_size: fd[self.characters] = c
+
+            logits, state = self.session.run([self.logits, self.states[-1]], feed_dict=fd)
+
             initial_state = state
             tags.extend(np.argmax(logits[0], axis=1))
 
