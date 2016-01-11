@@ -55,8 +55,8 @@ if [ "${#testing[@]}" -eq 0 ]; then
   fi
 else
   if [ "${#training[@]}" -le 1 ]; then
-    PYTHONPATH=../../lib:"$PYTHONPATH" ../../scripts/prepare_for_test.py "${testing[@]}" | PATH=.:"$PATH" PYTHONPATH=../../lib:"$PYTHONPATH" "$@" "${training[@]}" | PYTHONPATH=../../lib:"$PYTHONPATH" ../../scripts/eval.py "${testing[@]}"
+    cat "${testing[@]}" | PATH=.:"$PATH" PYTHONPATH=../../lib:"$PYTHONPATH" "$@" "${training[@]}" | PYTHONPATH=../../lib:"$PYTHONPATH" ../../scripts/eval.py "${testing[@]}"
   else
-    PYTHONPATH=../../lib:"$PYTHONPATH" ../../scripts/prepare_for_test.py "${testing[@]}" | PATH=.:"$PATH" PYTHONPATH=../../lib:"$PYTHONPATH" "$@" <(cat "${training[@]}") | PYTHONPATH=../../lib:"$PYTHONPATH" ../../scripts/eval.py "${testing[@]}"
+    cat "${testing[@]}" | PATH=.:"$PATH" PYTHONPATH=../../lib:"$PYTHONPATH" "$@" <(cat "${training[@]}") >&3 | PYTHONPATH=../../lib:"$PYTHONPATH" ../../scripts/eval.py "${testing[@]}"
   fi
 fi

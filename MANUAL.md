@@ -43,9 +43,6 @@ tagger command.
 
 The `-e testing_data_file` option is optional and can be specified multiple
 times. If specifies testing data relative to the `data` subdirectory of the repo.
-If used, the specified testing data are cleared (gold annotations removed), fed
-to the standard input of the tagger command, and the standard output of the
-tagger command is then evaluated against the gold annotations from the testing data.
 The evaluation is performed for every testing file separately and written
 to standard output.
 
