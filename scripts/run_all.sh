@@ -58,7 +58,7 @@ for command_line in "$@"; do
   log="$dir/../taggers/$tagger/exp-$experiment/$description"
 
   if [ -z "$grid" ]; then
-    "$dir"/run_tagger.sh -t"$tagger" -n"$experiment" "${training[@]}" "${testing[@]}" $command_line 2> >(trap "" SIGINT; tee "$log.err" >&2) | (trap "" SIGINT; tee "$log".out)
+    "$dir"/run_tagger.sh -t"$tagger" -n"$experiment" "${training[@]}" "${testing[@]}" $command_line 2> >(trap "" SIGINT SIGQUIT; tee "$log.err" >&2) | (trap "" SIGINT SIGQUIT; tee "$log".out)
   else
     >"$log".out
     >"$log".err

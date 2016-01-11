@@ -175,11 +175,11 @@ def main(args):
 
         import signal
         force_eval = {"value": False}
-        def handle_ctrl_z(signal, frame):
-            logging.debug("Ctrl+Z recieved, evaluation will be forced.")
+        def handle_sigquit(signal, frame):
+            logging.debug("Ctrl+\ recieved, evaluation will be forced.")
             force_eval["value"] = True
             pass
-        signal.signal(signal.SIGTSTP, handle_ctrl_z)
+        signal.signal(signal.SIGQUIT, handle_sigquit)
 
         logging.debug('Starting training.')
         try:
