@@ -182,18 +182,21 @@ def main(args):
         signal.signal(signal.SIGTSTP, handle_ctrl_z)
 
         logging.debug('Starting training.')
-        permuted_batches = []
-        while train_mgr.should_continue(min_mb_done=len(batches_train)):
-            if not permuted_batches:
-                permuted_batches = batches_train[:]
-                random.shuffle(permuted_batches)
-            words, chars, tags, lengths = permuted_batches.pop()
-            oov_mask = np.vectorize(lambda x: train_data.vocab.count(x) == 1 and np.random.uniform() < args.oov_sampling_p)(words)
-            words = np.where(oov_mask, np.zeros(words.shape), words)
-            mb_loss = tagger.learn(words, chars, tags, lengths)
+        try:
+            permuted_batches = []
+            while train_mgr.should_continue():
+                if not permuted_batches:
+                    permuted_batches = batches_train[:]
+                    random.shuffle(permuted_batches)
+                words, chars, tags, lengths = permuted_batches.pop()
+                oov_mask = np.vectorize(lambda x: train_data.vocab.count(x) == 1 and np.random.uniform() < args.oov_sampling_p)(words)
+                words = np.where(oov_mask, np.zeros(words.shape), words)
+                mb_loss = tagger.learn(words, chars, tags, lengths)
 
-            train_mgr.tick(mb_loss=mb_loss, force_eval=force_eval["value"])
-            force_eval["value"] = False
+                train_mgr.tick(mb_loss=mb_loss, force_eval=force_eval["value"])
+                force_eval["value"] = False
+        except KeyboardInterrupt:
+            logging.debug("Ctrl+C recieved, stopping training.")
 
     run_tagger_and_writeout(tagger, dev_data)
 
