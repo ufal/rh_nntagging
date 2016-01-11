@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import tensorflow as tf
 
@@ -153,7 +154,7 @@ class Tagger(object):
             with tf.variable_scope('decoder'):
                 self.lemma_chars = tf.placeholder(tf.int32, [None, num_steps, num_chars], name='lemma_chars')
 
-                lemma_state_size = 2 * self.lstm_size
+                lemma_state_size = self.lstm_size
 
                 lemma_w = tf.Variable(tf.random_uniform([lemma_state_size, len(alphabet)], 0.5),
                                            name="state_to_char_w")
@@ -163,7 +164,7 @@ class Tagger(object):
                                                     name="char_embeddings")
 
                 lemma_char_inputs = [tf.squeeze(input_, [1]) for input_ in
-                                     tf.split(1, num_chars, tf.reshape(self.lemma_chars, [-1, num_chars, len(alphabet)],
+                                     tf.split(1, num_chars, tf.reshape(self.lemma_chars, [-1, num_chars],
                                                                        name="reshape-lemma_char_inputs"))]
 
                 def loop(prev_state, _):
