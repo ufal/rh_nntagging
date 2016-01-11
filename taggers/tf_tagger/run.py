@@ -4,6 +4,7 @@ import time
 import numpy as np
 import os
 import logging
+import tensorflow as tf
 
 import conllu
 from tagger import Tagger
@@ -147,6 +148,7 @@ def main(args):
     logging.debug('Initializing random seed to 0.')
     random.seed(0)
     np.random.seed(0)
+    tf.set_random_seed(0)
 
     logging.debug('Loading training dataset from: %s' % args.training_file)
     train_data = TaggingDataset.load_from_file(args.training_file)
