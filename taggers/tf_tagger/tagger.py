@@ -8,7 +8,7 @@ class Tagger(object):
     """LSTM tagger model."""
     def __init__(self, vocab, tagset, alphabet, word_embedding_size,
                  char_embedding_size, num_chars, num_steps, optimizer_desc,
-                 seed=None, write_summaries=False):
+                 generate_lemmas, seed=None, write_summaries=False):
         """
         Builds the tagger computation graph and initializes it in a TensorFlow
         session.
@@ -30,7 +30,11 @@ class Tagger(object):
 
             num_steps: Maximum lenght of a sentence.
 
-            optimizer_desc: Description of the optimizer
+            optimizer_desc: Description of the optimizer.
+
+            generate_lemmas: Generate lemmas during tagging.
+
+            seed: TensorFlow seed
 
             write_summaries: Write summaries using TensorFlow interface.
         """
@@ -128,8 +132,6 @@ class Tagger(object):
             tf.reshape(tf.concat(1, self.outputs_bidi), [-1, 2 * self.lstm_size],
                        name="reshape-outputs_bidi")
 
-#        self.output = tf.nn.dropout(self.output, self.dropout_prob[0])
-
         # We are computing only the logits, not the actual softmax -- while
         # computing the loss, it is done by the sequence_loss_by_example and
         # during the runtime classification, the argmax over logits is enough.
@@ -144,12 +146,66 @@ class Tagger(object):
         # output maks: compute loss only if it insn't a padded word (i.e. zero index)
         output_mask = tf.reshape(tf.to_float(tf.not_equal(self.tags, 0)), [-1])
 
-        self.loss = seq2seq.sequence_loss_by_example(
+        self.tagging_loss = seq2seq.sequence_loss_by_example(
             logits=[self.logits_flatten],
             targets=[tf.reshape(self.tags, [-1])],
             weights=[output_mask],
             num_decoder_symbols=len(tagset))
-        self.cost = tf.reduce_mean(self.loss)
+
+        self.cost = tf.reduce_mean(self.tagging_loss)
+
+        if generate_lemmas:
+            with tf.variable_scope('decoder'):
+                self.lemma_characters = tf.placeholder(tf.int32, [None, num_steps, num_chars], name='lemma_characters')
+
+                self.lemma_state_size = 2 * self.lstm_size
+
+                self.lemma_W = tf.Variable(tf.random_uniform([self.lemma_state_size, len(self.alphabet)], 0.5),
+                        name="state_to_char_W")
+                self.lemma_B = \
+                    tf.Variable(tf.fill([len(self.alphabet)], - math.log(len(self.alphabet))),
+                            name="state_to_char_b")
+                self.lemma_char_embeddings = \
+                    tf.Variable(tf.random_uniform([len(self.alphabet), self.lemma_state_size], -0.5, 0.5),
+                            name="char_embeddings")
+
+                self.lemma_char_inputs = \
+                    [tf.squeeze(input_, [1]) for input_ in
+                            tf.split(1, num_chars, tf.reshape(self.lemma_characters,
+                                [-1, num_chars, len(self.alphabet)], name="reshape-lemma_char_inputs"))]
+
+                def loop(prev_state, _):
+                    # it takes the previous hidden state, finds the character and formats it
+                    # as input for the next time step ... used in the decoder in the "real decoding scenario"
+                    out_activation = tf.matmul(prev_state, self.lemma_W) + self.lemma_B
+                    prev_char_index = tf.argmax(out_activation, 1)
+                    return tf.nn.embedding_lookup(self.lemma_char_embeddings, prev_char_index)
+
+                embedded_lemma_characters = []
+                for lemma_chars in self.lemma_char_inputs[:-1]:
+                    embedded_lemma_characters.append(tf.nn.embedding_lookup(self.lemma_char_embeddings, lemma_chars))
+
+                decoder_cell = rnn_cell.BasicLSTMCell(self.lemma_state_size)
+                self.lemma_outputs_train, _ = seq2seq.rnn_decoder(embedded_lemma_characters, self.output,
+                                                                  decoder_cell)
+
+                tf.get_variable_scope().reuse_variables()
+                self.lemma_outputs_runtime, _ = seq2seq.rnn_decoder(embedded_lemma_characters, self.output,
+                                                                    decoder_cell, loop_function=loop)
+
+                lemma_char_logits = []
+                for output_train in self.lemma_outputs_train:
+                    output_train_activation = tf.matmul(output_train, self.lemma_W) + self.lemma_B
+                    lemma_char_logits.append(output_train_activation)
+
+                lemma_char_weights = []
+                for lemma_chars in self.lemma_char_inputs[1:]:
+                    lemma_char_weights.append(tf.to_float(tf.not_equal(lemma_chars, 0)))
+
+                self.lemmatizer_loss = seq2seq.sequence_loss(lemma_char_logits, self.lemma_char_inputs[1:],
+                                                             lemma_char_weights, len(self.alphabet))
+
+                self.cost += tf.reduce_mean(self.lemmatizer_loss)
 
         self.global_step = tf.Variable(0, trainable=False)
         def decay(learning_rate, exponent, iteration_steps):

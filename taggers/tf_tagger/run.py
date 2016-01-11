@@ -164,7 +164,8 @@ def main(args):
             char_embedding_size=args.char_embedding_size,
             num_chars=args.max_word_length,
             num_steps=args.max_sentence_length,
-            optimizer_desc=args.optimizer)
+            optimizer_desc=args.optimizer,
+            generate_lemmas=args.generate_lemmas)
 
     if not args.skip_train:
         batches_train = train_data.prepare_batches(
@@ -255,6 +256,8 @@ if __name__ == '__main__':
                         help='Optimizer specified as class constructor from tf.train module.')
     parser.add_argument('--max-epochs', default=None, type=int,
                         help='Maximum number of training epochs.')
+    parser.add_argument('--generate-lemmas', default=False, type=bool,
+                        help='Generate lemmas during tagging.')
     args = parser.parse_args()
 
     main(args)
