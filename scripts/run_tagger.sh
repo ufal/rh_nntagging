@@ -54,9 +54,16 @@ if [ "${#testing[@]}" -eq 0 ]; then
     PATH=.:"$PATH" PYTHONPATH=../../lib:"$PYTHONPATH" "$@" <(cat "${training[@]}")
   fi
 else
+  tmpfile=$(mktemp --tmpdir run_tagger.outputXXXXXX)
+  [ -f "$tmpfile" ] || exit 1
+  exec 3>"$tmpfile"
+  exec 4<"$tmpfile"
+  rm "$tmpfile"
+
   if [ "${#training[@]}" -le 1 ]; then
-    cat "${testing[@]}" | PATH=.:"$PATH" PYTHONPATH=../../lib:"$PYTHONPATH" "$@" "${training[@]}" | PYTHONPATH=../../lib:"$PYTHONPATH" ../../scripts/eval.py "${testing[@]}"
+    cat "${testing[@]}" | PATH=.:"$PATH" PYTHONPATH=../../lib:"$PYTHONPATH" "$@" "${training[@]}" >&3 || exit $?
   else
-    cat "${testing[@]}" | PATH=.:"$PATH" PYTHONPATH=../../lib:"$PYTHONPATH" "$@" <(cat "${training[@]}") >&3 | PYTHONPATH=../../lib:"$PYTHONPATH" ../../scripts/eval.py "${testing[@]}"
+    cat "${testing[@]}" | PATH=.:"$PATH" PYTHONPATH=../../lib:"$PYTHONPATH" "$@" <(cat "${training[@]}") >&3 || exit $?
   fi
+  PYTHONPATH=../../lib:"$PYTHONPATH" ../../scripts/eval.py "${testing[@]}" <&4
 fi
