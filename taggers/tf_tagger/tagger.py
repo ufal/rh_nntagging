@@ -52,9 +52,8 @@ class Tagger(object):
         self.tags = tf.placeholder(tf.int32, [None, num_steps])
         self.dropout_prob = tf.placeholder(tf.float32, [1])
 
-        # TODO change dimension when BasicLSTMCell is replaced
-        self.forward_initial_state = tf.placeholder(tf.float32, [None, 2 * lstm_size])
-        self.backward_initial_state = tf.placeholder(tf.float32, [None, 2* lstm_size])
+        self.forward_initial_state = tf.placeholder(tf.float32, [None, rnn_cell.BasicLSTMCell(lstm_size).state_size])
+        self.backward_initial_state = tf.placeholder(tf.float32, [None, rnn_cell.BasicLSTMCell(lstm_size).state_size])
 
         self.char_embeddings = \
             tf.Variable(tf.random_uniform([len(alphabet), char_embedding_size], -1.0, 1.0))
