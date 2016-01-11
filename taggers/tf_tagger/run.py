@@ -12,15 +12,13 @@ from tagging_dataset import TaggingDataset
 
 
 class TrainingManager(object):
-    def __init__(self, eval_interval=30.0, n_train_batches=100,
-                 training_dir=None,
+    def __init__(self, n_train_batches, eval_interval, training_dir=None,
                  tagger_taste_fn=None, tagger_dev_eval_fn=None, tagger_save_fn=None):
         """Takes care of monitoring and managing the model training.
 
         Args:
-            eval_interval: evaluate model on dev data every `eval_interval` secs
-            n_train_batches: from how many minibatch losses should the final loss
-                    be computed?
+            n_train_batches: number of batches in training data
+            eval_interval: evaluate model on dev data every `eval_interval` batches
             training_dir: None or a path to directory where models and other
                     logs will be saved
             tagger_taste_fn: a function that is called with stats to print out
@@ -30,6 +28,7 @@ class TrainingManager(object):
             tagger_save_fn: a function that is called after each evaluation to
                     save the model to a file that is passed as an argument
         """
+        self.n_train_batches = n_train_batches
         self.last_eval = 0
         self.eval_interval = eval_interval
         self.tagger_taste_fn = tagger_taste_fn
@@ -44,7 +43,7 @@ class TrainingManager(object):
         self.evals_done = 0
         self.training_dir = training_dir
 
-    def should_continue(self, min_mb_done=50, max_dev_not_improved=10):
+    def should_continue(self, min_mb_done=None, max_dev_not_improved=None):
         """Shall the training continue?
 
         Args:
@@ -55,6 +54,9 @@ class TrainingManager(object):
 
         Returns: bool, whether the training should continue
         """
+        if min_mb_done is None: min_mb_done = self.n_train_batches
+        if max_dev_not_improved is None: max_dev_not_improved = self.n_train_batches
+
         if self.mb_done < min_mb_done:
             return True
         else:
@@ -63,7 +65,7 @@ class TrainingManager(object):
             else:
                 return True
 
-    def tick(self, mb_loss):
+    def tick(self, mb_loss, force_eval=False):
         """Report minibatch loss once upon a time.
 
         Args:
@@ -72,17 +74,17 @@ class TrainingManager(object):
         self.recent_losses.append(mb_loss)
         self.mb_done += 1
 
-        if time.time() - self.last_eval > self.eval_interval:
+        if self.mb_done - self.last_eval >= self.eval_interval or force_eval:
             self.eval_on_dev()
-            self.last_eval = time.time()
             self.print_stats()
+            if self.mb_done - self.last_eval >= self.eval_interval: self.last_eval = self.mb_done
 
 
     def print_stats(self):
         """Print current stats of the training."""
-        logging.debug(
-            '  mb_done(%d) avg_loss(%.8f) max_dev_acc(%.5f) curr_dev_acc(%.5f)'
-            % (self.mb_done, np.mean(self.recent_losses), self.max_dev_perf, self.curr_dev_perf)
+        logging.debug('Epoch %d, batches %d/%d, avg_loss(%.8f) max_dev_acc(%.5f) curr_dev_acc(%.5f)'
+            % (1 + self.mb_done / self.n_train_batches, self.mb_done % self.n_train_batches,
+               self.n_train_batches, np.mean(self.recent_losses), self.max_dev_perf, self.curr_dev_perf)
         )
 
         self.tagger_taste_fn()
@@ -112,17 +114,11 @@ def taste_tagger(tagger, batches):
     mb_x, chars, mb_y, lengths = batches[0]
     mb_y_hat = tagger.predict(mb_x, chars, lengths)
 
-    logging.debug("Taste: word tag (true tag)")
     for x, y, y_hat in zip(mb_x, mb_y, mb_y_hat)[:3]:
+        line = ' '
         for x_t, y_t, y_hat_t in zip(x, y, y_hat)[:5]:
-            logging.debug(
-                "  %10s %10s (%s)"
-                % (
-                    tagger.vocab.rev(x_t),
-                    tagger.tagset.rev(y_hat_t),
-                    tagger.tagset.rev(y_t)
-                ))
-        logging.debug("")
+            line += ' %s(%s/%s)' % (tagger.vocab.rev(x_t), tagger.tagset.rev(y_hat_t), tagger.tagset.rev(y_t))
+        logging.debug(line)
 
 
 def eval_tagger(tagger, batches):
@@ -170,7 +166,7 @@ def main(args):
                 args.batch_size, args.max_sentence_length, args.max_word_length)
 
         train_mgr = TrainingManager(
-            n_train_batches=len(batches_train),
+            len(batches_train), args.eval_interval,
             training_dir=args.training_dir,
             tagger_taste_fn=lambda: taste_tagger(tagger, batches_train),
             tagger_dev_eval_fn=lambda: eval_tagger(tagger, batches_dev),
@@ -194,6 +190,7 @@ def main(args):
 
 
 def run_tagger_and_writeout(tagger, dev_data):
+    logging.debug("Tagging testing data with the trained tagger.")
     for words, chars, _ in dev_data.seqs:
 
         y_hat = tagger.tag_single_sentence(words, chars)
@@ -202,6 +199,7 @@ def run_tagger_and_writeout(tagger, dev_data):
         for i, (word, utag) in enumerate(zip(words, y_hat_str)):
             print "{}\t{}\t_\t{}\t_\t_\t_\t_\t_\t_".format(i + 1, dev_data.vocab.rev(word), utag)
         print ""
+    logging.debug("Testing data tagged.")
 
 
 if __name__ == '__main__':
@@ -222,6 +220,8 @@ if __name__ == '__main__':
                              'a stored model for tagging?')
     parser.add_argument('--batch-size', default=50, type=int,
                         help='Batch size.')
+    parser.add_argument('--eval-interval', default=100, type=int,
+                        help='Evaluate tagger every specified number of batches.')
     parser.add_argument('--oov-sampling-p', default=0.0, type=float,
                         help='Probablity of a word of frequency 1 to be sampled as an OOV.')
     parser.add_argument('--word-embedding-size', default=128, type=int,
