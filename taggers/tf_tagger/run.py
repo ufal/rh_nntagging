@@ -44,7 +44,7 @@ class TrainingManager(object):
         self.evals_done = 0
         self.training_dir = training_dir
 
-    def should_continue(self, min_mb_done=None, max_dev_not_improved=None):
+    def should_continue(self, min_mb_done=None, max_dev_not_improved=None, max_epochs=None):
         """Shall the training continue?
 
         Args:
@@ -57,14 +57,18 @@ class TrainingManager(object):
         """
         if min_mb_done is None: min_mb_done = self.n_train_batches
         if max_dev_not_improved is None: max_dev_not_improved = self.n_train_batches
+        if max_epochs is None: max_epochs = self.mb_done + 1
 
         if self.mb_done < min_mb_done:
             return True
+
+        if self.mb_done >= max_epochs * self.n_train_batches:
+            return False
+
+        if self.not_improved_by_eps_for > max_dev_not_improved:
+            return False
         else:
-            if self.not_improved_by_eps_for > max_dev_not_improved:
-                return False
-            else:
-                return True
+            return True
 
     def tick(self, mb_loss, force_eval=False):
         """Report minibatch loss once upon a time.
@@ -187,7 +191,7 @@ def main(args):
         logging.debug('Starting training.')
         try:
             permuted_batches = []
-            while train_mgr.should_continue():
+            while train_mgr.should_continue(max_epochs=args.max_epochs):
                 if not permuted_batches:
                     permuted_batches = batches_train[:]
                     random.shuffle(permuted_batches)
@@ -249,6 +253,8 @@ if __name__ == '__main__':
                         help='Maximum word length during training.')
     parser.add_argument('--optimizer', default='AdamOptimizer(1e-4)', type=str,
                         help='Optimizer specified as class constructor from tf.train module.')
+    parser.add_argument('--max-epochs', default=None, type=int,
+                        help='Maximum number of training epochs.')
     args = parser.parse_args()
 
     main(args)
