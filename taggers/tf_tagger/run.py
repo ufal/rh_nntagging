@@ -55,9 +55,6 @@ class TrainingManager(object):
 
         Returns: bool, whether the training should continue
         """
-        if self.mb_done >= 400:
-            return False
-
         if self.mb_done < min_mb_done:
             return True
         else:
