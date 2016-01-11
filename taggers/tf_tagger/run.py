@@ -252,7 +252,7 @@ if __name__ == '__main__':
                         help='Maximum sentence length during training.')
     parser.add_argument('--max-word-length', default=20, type=int,
                         help='Maximum word length during training.')
-    parser.add_argument('--optimizer', default='AdamOptimizer(1e-4)', type=str,
+    parser.add_argument('--optimizer', default='AdamOptimizer(1e-3)', type=str,
                         help='Optimizer specified as class constructor from tf.train module.')
     parser.add_argument('--max-epochs', default=None, type=int,
                         help='Maximum number of training epochs.')
