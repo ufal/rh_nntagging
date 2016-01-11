@@ -151,8 +151,13 @@ class Tagger(object):
             num_decoder_symbols=len(tagset))
         self.cost = tf.reduce_mean(self.loss)
 
+        self.global_step = tf.Variable(0, trainable=False)
+        def decay(learning_rate, exponent, iteration_steps):
+            return tf.train.exponential_decay(learning_rate, self.global_step,
+                    iteration_steps, exponent, staircase=True)
+
         self.optimizer = eval('tf.train.' + optimizer_desc)
-        self.train = self.optimizer.minimize(self.cost)
+        self.train = self.optimizer.minimize(self.cost, global_step=self.global_step)
 
         self.session = tf.Session()
         self.session.run(tf.initialize_all_variables())
