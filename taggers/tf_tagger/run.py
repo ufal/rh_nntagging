@@ -173,6 +173,14 @@ def main(args):
             tagger_save_fn=lambda fname: tagger.save(fname)
         )
 
+        import signal
+        force_eval = {"value": False}
+        def handle_ctrl_z(signal, frame):
+            logging.debug("Ctrl+Z recieved, evaluation will be forced.")
+            force_eval["value"] = True
+            pass
+        signal.signal(signal.SIGTSTP, handle_ctrl_z)
+
         logging.debug('Starting training.')
         permuted_batches = []
         while train_mgr.should_continue(min_mb_done=len(batches_train)):
@@ -184,7 +192,8 @@ def main(args):
             words = np.where(oov_mask, np.zeros(words.shape), words)
             mb_loss = tagger.learn(words, chars, tags, lengths)
 
-            train_mgr.tick(mb_loss=mb_loss)
+            train_mgr.tick(mb_loss=mb_loss, force_eval=force_eval["value"])
+            force_eval["value"] = False
 
     run_tagger_and_writeout(tagger, dev_data)
 
