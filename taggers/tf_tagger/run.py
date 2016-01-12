@@ -207,7 +207,7 @@ def main(args):
 
 def run_tagger_and_writeout(tagger, dev_data):
     logging.debug("Tagging testing data with the trained tagger.")
-    for words, chars, _ in dev_data.seqs:
+    for words, chars, _, _ in dev_data.seqs:
 
         y_hat = tagger.tag_single_sentence(words, chars)
         y_hat_str = [tagger.tagset.rev(tag_id) for tag_id in y_hat]
