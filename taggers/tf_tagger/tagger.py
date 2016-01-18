@@ -9,7 +9,7 @@ class Tagger(object):
     """LSTM tagger model."""
     def __init__(self, vocab, tagset, alphabet, word_embedding_size,
                  char_embedding_size, num_chars, num_steps, optimizer_desc,
-                 generate_lemmas, seed=None, write_summaries=False):
+                 generate_lemmas, seed=None, write_summaries=True):
         """
         Builds the tagger computation graph and initializes it in a TensorFlow
         session.
@@ -138,18 +138,28 @@ class Tagger(object):
             tf.get_variable("softmax_b", [len(tagset)]))
 
         self.logits = tf.reshape(logits_flatten, [-1, num_steps, len(tagset)], name="reshape-logits")
+        estimated_tags_flat = tf.to_int32(tf.argmax(logits_flatten, dimension=1))
         self.states = states
 
         # output maks: compute loss only if it insn't a padded word (i.e. zero index)
         output_mask = tf.reshape(tf.to_float(tf.not_equal(self.tags, 0)), [-1])
 
+        gt_tags_flat = tf.reshape(self.tags, [-1])
         tagging_loss = seq2seq.sequence_loss_by_example(
             logits=[logits_flatten],
-            targets=[tf.reshape(self.tags, [-1])],
+            targets=[gt_tags_flat],
             weights=[output_mask],
             num_decoder_symbols=len(tagset))
 
+        tagging_accuracy = \
+            tf.reduce_mean(tf.to_float(tf.equal(estimated_tags_flat, gt_tags_flat)) * output_mask)
+        tf.scalar_summary('train_accuracy', tagging_accuracy, collections=["train"])
+        tf.scalar_summary('dev_accuracy', tagging_accuracy, collections=["dev"])
+
         self.cost = tf.reduce_mean(tagging_loss)
+
+        tf.scalar_summary('train_tagging_loss', tf.reduce_mean(tagging_loss), collections=["train"])
+        tf.scalar_summary('dev_tagging_loss', tf.reduce_mean(tagging_loss), collections=["dev"])
 
         if generate_lemmas:
             with tf.variable_scope('decoder'):
@@ -189,17 +199,32 @@ class Tagger(object):
                         seq2seq.rnn_decoder(embedded_lemma_characters, output, decoder_cell,
                                             loop_function=loop)
 
-                lemma_char_logits = []
-                for output_train in lemma_outputs_train:
-                    output_train_activation = tf.matmul(output_train, lemma_w) + lemma_b
-                    lemma_char_logits.append(output_train_activation)
+                lemma_char_logits_train = \
+                    [tf.matmul(o, lemma_w) + lemma_b for o in lemma_outputs_train]
+
+                lemma_char_logits_runtime = \
+                    [tf.matmul(o, lemma_w) + lemma_b for o in lemma_outputs_runtime]
 
                 lemma_char_weights = []
                 for lemma_chars in lemma_char_inputs[1:]:
                     lemma_char_weights.append(tf.to_float(tf.not_equal(lemma_chars, 0)))
 
-                lemmatizer_loss = seq2seq.sequence_loss(lemma_char_logits, lemma_char_inputs[1:],
+                lemmatizer_loss = seq2seq.sequence_loss(lemma_char_logits_train, lemma_char_inputs[1:],
                                                         lemma_char_weights, len(alphabet))
+
+                lemmatizer_loss_runtime = \
+                        seq2seq.sequence_loss(lemma_char_logits_runtime, lemma_char_inputs[1:],
+                                              lemma_char_weights, len(alphabet))
+
+                tf.scalar_summary('train_lemma_loss_with_gt_inputs',
+                                  tf.reduce_mean(lemmatizer_loss), collections=["train"])
+                tf.scalar_summary('dev_lemma_loss_with_gt_inputs',
+                                  tf.reduce_mean(lemmatizer_loss), collections=["dev"])
+
+                tf.scalar_summary('train_lemma_loss_with_decoded_inputs',
+                                  tf.reduce_mean(lemmatizer_loss_runtime), collections=["train"])
+                tf.scalar_summary('dev_lemma_loss_with_decoded_inputs',
+                                  tf.reduce_mean(lemmatizer_loss_runtime), collections=["dev"])
 
                 self.cost += tf.reduce_mean(lemmatizer_loss)
 
@@ -215,13 +240,18 @@ class Tagger(object):
         self.session.run(tf.initialize_all_variables())
 
         if write_summaries:
+            self.summary_train = tf.merge_summary(tf.get_collection("train"))
+            self.summary_dev = tf.merge_summary(tf.get_collection("dev"))
             self.summary_writer = tf.train.SummaryWriter("logs", self.session.graph_def)
+
+        self.steps = 0 # TODO: should be probably elsewhere
 
 
     def learn(self, words, chars, tags, lengths, lemma_chars):
         """Learn from the given minibatch."""
 
         initial_state = np.zeros([words.shape[0], 2 * self.lstm_size])
+        self.steps += 1
 
         fd = {
             self.tags:tags,
@@ -234,7 +264,9 @@ class Tagger(object):
         if self.char_embedding_size: fd[self.chars] = chars
         if self.generate_lemmas: fd[self.lemma_chars] = lemma_chars
 
-        _, cost = self.session.run([self.train, self.cost], feed_dict=fd)
+        _, cost, summary_str = \
+                self.session.run([self.train, self.cost, self.summary_train], feed_dict=fd)
+        self.summary_writer.add_summary(summary_str, self.steps)
 
         return cost
 
@@ -253,7 +285,10 @@ class Tagger(object):
         if self.word_embedding_size: fd[self.words] = words
         if self.char_embedding_size: fd[self.chars] = chars
 
-        logits = self.session.run(self.logits, feed_dict=fd)
+        # TODO extract the decoded lemmas here
+        logits = \
+                self.session.run(self.logits, feed_dict=fd)
+        #self.summary_writer.add_summary(summary_str, self.steps)
 
         return np.argmax(logits, axis=2)
 
