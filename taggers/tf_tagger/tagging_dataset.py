@@ -83,8 +83,8 @@ class TaggingDataset(object):
 
             for j in range(min(len(words), max_seq_len)):
                 res_c[i, j, :min(len(chars[j]), max_word_len)] = chars[j][:min(len(chars[j]), max_word_len)]
-                res_lemma_c[i, j, :min(len(chars[j]), max_word_len + 2)] = \
-                        chars[j][:min(len(chars[j]), max_word_len + 2 )]
+                res_lemma_c[i, j, :min(len(lemma_chars[j]), max_word_len + 2)] = \
+                        lemma_chars[j][:min(len(lemma_chars[j]), max_word_len + 2 )]
 
 
             lengths[i] = len(words)
@@ -151,7 +151,7 @@ class TaggingDataset(object):
     def get_word_and_tag_id(word, vocab, alphabet, tags, learn_vocab, learn_tags):
         word_text = TaggingDataset.word_obj_to_str(word)
         chars = list(word_text)
-        lemma_chars = ["<w>"]+list(word.lemma)+["</w>"]
+        lemma_chars = [u"<w>"]+list(word.lemma)+[u"</w>"]
 
         if learn_vocab:
             word_id = vocab.add(word_text)
