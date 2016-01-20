@@ -131,7 +131,7 @@ def lemma_from_indices(tagger, lemma_char_indices):
 def taste_tagger(tagger, batches):
     """Print out first 3 examples of the first batch tagged by the model."""
     mb_x, chars, mb_y, lengths, mb_lemma_chars = batches[0]
-    mb_y_hat, mb_lemma_chars_hat = tagger.predict(mb_x, chars, lengths)
+    mb_y_hat, mb_lemma_chars_hat = tagger.predict_and_eval(mb_x, chars, lengths, mb_y, mb_lemma_chars)
 
     for x, y, y_hat, lemma_chars, lemma_chars_hat in \
             zip(mb_x, mb_y, mb_y_hat, mb_lemma_chars, mb_lemma_chars_hat)[:3]:
@@ -156,7 +156,7 @@ def eval_tagger(tagger, batches):
     lemma_count = 0
 
     for mb_x, chars, mb_y, lengths, mb_lemma_chars in batches:
-        mb_y_hat, mb_lemma_chars_hat = tagger.predict(mb_x, chars, lengths)
+        mb_y_hat, mb_lemma_chars_hat = tagger.predict_and_eval(mb_x, chars, lengths, mb_y, mb_lemma_chars)
 
         for length, lemma_chars, lemma_chars_hat in zip(lengths, mb_lemma_chars, mb_lemma_chars_hat):
             for t in range(min(tagger.num_steps, length)):
@@ -214,8 +214,9 @@ def main(args):
 
     batches_train = train_data.prepare_batches(
         args.batch_size, args.max_sentence_length, args.max_word_length)
+    # all development data are in one batch
     batches_dev = dev_data.prepare_batches(
-        args.batch_size, args.max_sentence_length, args.max_word_length)
+        len(dev_data.seqs), args.max_sentence_length, args.max_word_length)
 
     train_mgr = TrainingManager(
         len(batches_train), args.eval_interval,

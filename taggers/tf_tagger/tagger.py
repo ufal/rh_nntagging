@@ -51,11 +51,11 @@ class Tagger(object):
         self.tagset = tagset
         self.alphabet = alphabet
 
-        self.forward_initial_state = tf.placeholder(tf.float32, [None, rnn_cell.BasicLSTMCell(self.lstm_size).state_size])
-        self.backward_initial_state = tf.placeholder(tf.float32, [None, rnn_cell.BasicLSTMCell(self.lstm_size).state_size])
-        self.sentence_lengths = tf.placeholder(tf.int64, [None])
-        self.tags = tf.placeholder(tf.int32, [None, num_steps])
-        self.dropout_prob = tf.placeholder(tf.float32, [1])
+        self.forward_initial_state = tf.placeholder(tf.float32, [None, rnn_cell.BasicLSTMCell(self.lstm_size).state_size], name="forward_lstm_initial_state")
+        self.backward_initial_state = tf.placeholder(tf.float32, [None, rnn_cell.BasicLSTMCell(self.lstm_size).state_size], name="backward_lstm_initial_state")
+        self.sentence_lengths = tf.placeholder(tf.int64, [None], name="sentence_lengths")
+        self.tags = tf.placeholder(tf.int32, [None, num_steps], name="ground_truth_tags")
+        self.dropout_prob = tf.placeholder(tf.float32, [1], name="dropout_keep_p")
         self.generate_lemmas = generate_lemmas
 
         input_list = []
@@ -274,13 +274,13 @@ class Tagger(object):
         return cost
 
 
-    def predict(self, words, chars, lengths):
+    def predict_and_eval(self, words, chars, lengths, tags, lemma_chars):
         """Predict tags for the given minibatch."""
 
         initial_state = np.zeros([words.shape[0], 2 * self.lstm_size])
 
-
         fd = {
+            self.tags:tags,
             self.sentence_lengths: lengths,
             self.dropout_prob: np.array([1]),
             self.forward_initial_state: initial_state,
@@ -288,13 +288,11 @@ class Tagger(object):
         }
         if self.word_embedding_size: fd[self.words] = words
         if self.char_embedding_size: fd[self.chars] = chars
-        if self.generate_lemmas:
-            fd[self.lemma_chars] = np.zeros([words.shape[0], self.num_steps, self.num_chars + 2])
+        if self.generate_lemmas: fd[self.lemma_chars] = lemma_chars
 
-        # TODO extract the decoded lemmas here
-        logits, lemmas = \
-                self.session.run([self.logits, self.lemmas_decoded], feed_dict=fd)
-        #self.summary_writer.add_summary(summary_str, self.steps)
+        logits, lemmas, summary_str = \
+                self.session.run([self.logits, self.lemmas_decoded, self.summary_dev], feed_dict=fd)
+        self.summary_writer.add_summary(summary_str, self.steps)
 
         return np.argmax(logits, axis=2), lemmas
 

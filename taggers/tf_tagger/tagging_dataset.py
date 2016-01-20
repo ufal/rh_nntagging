@@ -96,7 +96,8 @@ class TaggingDataset(object):
         """Load dataset from the given file."""
         reader = conllu.reader(fname)
 
-        learn_tags, learn_vocab, tagset, vocab, alphabet = TaggingDataset.initialize_vocab_and_tags(tags, vocab, alphabet)
+        learn_tags, learn_vocab, tagset, vocab, alphabet = \
+                TaggingDataset.initialize_vocab_and_tags(tags, vocab, alphabet)
 
         seqs = []
         for sentence in reader:
