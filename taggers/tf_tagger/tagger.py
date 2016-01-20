@@ -205,6 +205,9 @@ class Tagger(object):
                 lemma_char_logits_runtime = \
                     [tf.matmul(o, lemma_w) + lemma_b for o in lemma_outputs_runtime]
 
+                self.lemmas_decoded = \
+                    tf.reshape(tf.argmax(tf.concat(0, lemma_char_logits_runtime), 1), [-1, num_steps, num_chars + 1])
+
                 lemma_char_weights = []
                 for lemma_chars in lemma_char_inputs[1:]:
                     lemma_char_weights.append(tf.to_float(tf.not_equal(lemma_chars, 0)))
@@ -276,6 +279,7 @@ class Tagger(object):
 
         initial_state = np.zeros([words.shape[0], 2 * self.lstm_size])
 
+
         fd = {
             self.sentence_lengths: lengths,
             self.dropout_prob: np.array([1]),
@@ -284,13 +288,15 @@ class Tagger(object):
         }
         if self.word_embedding_size: fd[self.words] = words
         if self.char_embedding_size: fd[self.chars] = chars
+        if self.generate_lemmas:
+            fd[self.lemma_chars] = np.zeros([words.shape[0], self.num_steps, self.num_chars + 2])
 
         # TODO extract the decoded lemmas here
-        logits = \
-                self.session.run(self.logits, feed_dict=fd)
+        logits, lemmas = \
+                self.session.run([self.logits, self.lemmas_decoded], feed_dict=fd)
         #self.summary_writer.add_summary(summary_str, self.steps)
 
-        return np.argmax(logits, axis=2)
+        return np.argmax(logits, axis=2), lemmas
 
     def tag_single_sentence(self, words, chars):
         """Tags a sentence of arbitrary length."""

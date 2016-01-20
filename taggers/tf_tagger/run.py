@@ -1,6 +1,7 @@
 from collections import deque
 import random
 import os
+import Levenshtein
 import logging
 
 import numpy as np
@@ -39,6 +40,7 @@ class TrainingManager(object):
         self.not_improved_by_eps_for = 0
         self.eps = 1e-3
         self.max_dev_perf = 0.0
+        self.max_dev_lemma_perf = 0.0
         self.evals_done = 0
         self.training_dir = training_dir
 
@@ -85,16 +87,17 @@ class TrainingManager(object):
 
     def print_stats(self):
         """Print current stats of the training."""
-        logging.debug('Epoch %d, batches %d/%d, avg_loss(%.8f) max_dev_acc(%.5f) curr_dev_acc(%.5f)' %
+        logging.debug('Epoch %d, batches %d/%d, avg_loss(%.8f) max_dev_acc(%.5f) curr_dev_acc(%.5f) max_dev_lemma_acc(%.5f) curr_dev_lemma_acc(%.5f)' %
                       (1 + self.mb_done / self.n_train_batches, self.mb_done % self.n_train_batches,
-                       self.n_train_batches, np.mean(self.recent_losses), self.max_dev_perf, self.curr_dev_perf))
+                       self.n_train_batches, np.mean(self.recent_losses), self.max_dev_perf,
+                       self.curr_dev_perf, self.max_dev_lemma_perf, self.curr_dev_lemma_perf))
 
         self.tagger_taste_fn()
 
     def eval_on_dev(self):
         """Evaluate the model on dev data."""
         self.evals_done += 1
-        tagger_perf = self.tagger_dev_eval_fn()
+        tagger_perf, lemmatizer_perf = self.tagger_dev_eval_fn()
 
         if tagger_perf < self.max_dev_perf - self.eps:
             self.not_improved_by_eps_for += 1
@@ -104,22 +107,41 @@ class TrainingManager(object):
         self.max_dev_perf = max(self.max_dev_perf, tagger_perf)
         self.curr_dev_perf = tagger_perf
 
+        self.max_dev_lemma_perf = max(self.max_dev_lemma_perf, lemmatizer_perf)
+        self.curr_dev_lemma_perf = lemmatizer_perf
+
         if self.training_dir:
             if not os.path.exists(self.training_dir):
                 os.makedirs(self.training_dir)
 
             self.tagger_save_fn(os.path.join(self.training_dir, 'model_%d.pickle' % self.evals_done))
 
+def lemma_from_indices(tagger, lemma_char_indices):
+    if tagger.alphabet.rev(lemma_char_indices[0]) == "<w>":
+            lemma_char_indices = lemma_char_indices[1:]
+    lemma_chars = []
+    for index in lemma_char_indices:
+        let = tagger.alphabet.rev(index)
+        if let != "</w>":
+            lemma_chars.append(let)
+        else:
+            break
+    return u"".join(lemma_chars)
 
 def taste_tagger(tagger, batches):
     """Print out first 3 examples of the first batch tagged by the model."""
-    mb_x, chars, mb_y, lengths, _ = batches[0]
-    mb_y_hat = tagger.predict(mb_x, chars, lengths)
+    mb_x, chars, mb_y, lengths, mb_lemma_chars = batches[0]
+    mb_y_hat, mb_lemma_chars_hat = tagger.predict(mb_x, chars, lengths)
 
-    for x, y, y_hat in zip(mb_x, mb_y, mb_y_hat)[:3]:
+    for x, y, y_hat, lemma_chars, lemma_chars_hat in \
+            zip(mb_x, mb_y, mb_y_hat, mb_lemma_chars, mb_lemma_chars_hat)[:3]:
         line = ' '
-        for x_t, y_t, y_hat_t in zip(x, y, y_hat)[:5]:
-            line += ' %s(%s/%s)' % (tagger.vocab.rev(x_t), tagger.tagset.rev(y_hat_t), tagger.tagset.rev(y_t))
+        for x_t, y_t, y_hat_t, lemma_chars_t, lemma_chars_hat_t in \
+                zip(x, y, y_hat, lemma_chars, lemma_chars_hat)[:5]:
+            original_lemma = lemma_from_indices(tagger, lemma_chars_t)
+            decoded_lemma = lemma_from_indices(tagger, lemma_chars_hat_t)
+            line += ' %s(%s/%s)[%s/%s]' % (tagger.vocab.rev(x_t), tagger.tagset.rev(y_hat_t),
+                    tagger.tagset.rev(y_t), original_lemma, decoded_lemma)
         logging.debug(line)
 
 
@@ -127,13 +149,39 @@ def eval_tagger(tagger, batches):
     """Evaluate the tagger on the given data."""
     acc_total = 0.0
     acc_cnt = 0
-    for mb_x, chars, mb_y, lengths, _ in batches:
-        mb_y_hat = tagger.predict(mb_x, chars, lengths)
+
+    lemma_total = 0.0
+    lemma_edit_dist = 0.0
+    lemma_len_diff = 0.0
+    lemma_count = 0
+
+    for mb_x, chars, mb_y, lengths, mb_lemma_chars in batches:
+        mb_y_hat, mb_lemma_chars_hat = tagger.predict(mb_x, chars, lengths)
+
+        for length, lemma_chars, lemma_chars_hat in zip(lengths, mb_lemma_chars, mb_lemma_chars_hat):
+            for t in range(min(tagger.num_steps, length)):
+                gt_lemma = lemma_from_indices(tagger, lemma_chars[t])
+                decoded_lemma = lemma_from_indices(tagger, lemma_chars_hat[t])
+                #import sys; print >> sys.stderr, type(gt_lemma)
+                if gt_lemma == decoded_lemma:
+                    lemma_total += 1
+                lemma_edit_dist += 1 - Levenshtein.ratio(gt_lemma, decoded_lemma)
+                lemma_len_diff += abs(len(gt_lemma) - len(decoded_lemma))
+                lemma_count += 1
 
         acc_total += compute_accuracy(mb_y, mb_y_hat)
         acc_cnt += 1
 
-    return acc_total / acc_cnt
+    if hasattr(tagger, 'summary_writer'):
+        external_str = tf.Summary(value=[
+            tf.Summary.Value(tag="tagging_accuracy", simple_value=acc_total / acc_cnt),
+            tf.Summary.Value(tag="lemma_accuracy", simple_value=lemma_total / lemma_count),
+            tf.Summary.Value(tag="lemma_edit_dist", simple_value=lemma_edit_dist / lemma_count),
+            tf.Summary.Value(tag="lemma_length_diff", simple_value=lemma_len_diff / lemma_count),
+        ])
+        tagger.summary_writer.add_summary(external_str, tagger.steps)
+
+    return acc_total / acc_cnt, lemma_total / lemma_count
 
 
 def compute_accuracy(mb_y, mb_y_hat):
