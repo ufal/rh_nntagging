@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import tensorflow as tf
+import datetime
 
 from tensorflow.models.rnn import rnn_cell, rnn, seq2seq
 
@@ -152,7 +153,8 @@ class Tagger(object):
             num_decoder_symbols=len(tagset))
 
         tagging_accuracy = \
-            tf.reduce_mean(tf.to_float(tf.equal(estimated_tags_flat, gt_tags_flat)) * output_mask)
+            tf.reduce_sum(tf.to_float(tf.equal(estimated_tags_flat, gt_tags_flat)) * output_mask) \
+                / tf.reduce_sum(output_mask)
         tf.scalar_summary('train_accuracy', tagging_accuracy, collections=["train"])
         tf.scalar_summary('dev_accuracy', tagging_accuracy, collections=["dev"])
 
@@ -245,7 +247,8 @@ class Tagger(object):
         if write_summaries:
             self.summary_train = tf.merge_summary(tf.get_collection("train"))
             self.summary_dev = tf.merge_summary(tf.get_collection("dev"))
-            self.summary_writer = tf.train.SummaryWriter("logs", self.session.graph_def)
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+            self.summary_writer = tf.train.SummaryWriter("logs/"+timestamp, self.session.graph_def)
 
         self.steps = 0 # TODO: should be probably elsewhere
 
@@ -290,8 +293,13 @@ class Tagger(object):
         if self.char_embedding_size: fd[self.chars] = chars
         if self.generate_lemmas: fd[self.lemma_chars] = lemma_chars
 
-        logits, lemmas, summary_str = \
-                self.session.run([self.logits, self.lemmas_decoded, self.summary_dev], feed_dict=fd)
+        if self.generate_lemmas:
+            logits, lemmas, summary_str = \
+                    self.session.run([self.logits, self.lemmas_decoded, self.summary_dev], feed_dict=fd)
+        else:
+            logits, summary_str = \
+                    self.session.run([self.logits, self.summary_dev], feed_dict=fd)
+            lemmas = None
         self.summary_writer.add_summary(summary_str, self.steps)
 
         return np.argmax(logits, axis=2), lemmas
