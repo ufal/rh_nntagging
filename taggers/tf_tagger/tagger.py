@@ -10,7 +10,7 @@ class Tagger(object):
     """LSTM tagger model."""
     def __init__(self, vocab, tagset, alphabet, word_embedding_size,
                  char_embedding_size, num_chars, num_steps, optimizer_desc,
-                 generate_lemmas, seed=None, write_summaries=True):
+                 generate_lemmas, l2, seed=None, write_summaries=True):
         """
         Builds the tagger computation graph and initializes it in a TensorFlow
         session.
@@ -61,6 +61,8 @@ class Tagger(object):
 
         input_list = []
 
+        regularize = []
+
         # Word-level embeddings
         if word_embedding_size:
             self.words = tf.placeholder(tf.int32, [None, num_steps], name='words')
@@ -86,13 +88,17 @@ class Tagger(object):
                 char_outputs, char_states = rnn.rnn(
                     cell=char_lstm,
                     inputs=char_inputs, dtype=tf.float32)
-                    #initial_state=char_lstm.zero_state(-1, tf.float32))
+                tf.get_variable_scope().reuse_variables()
+                regularize.append(tf.get_variable('RNN/BasicLSTMCell/Linear/Matrix'))
+
 
             with tf.variable_scope('char_backward'):
                 char_lstm_rev = rnn_cell.BasicLSTMCell(char_embedding_size)
                 char_outputs_rev, char_states_rev = rnn.rnn(
                     cell=char_lstm_rev,
                     inputs=list(reversed(char_inputs)), dtype=tf.float32)
+                tf.get_variable_scope().reuse_variables()
+                regularize.append(tf.get_variable('RNN/BasicLSTMCell/Linear/Matrix'))
 
             last_char_lstm_state = tf.split(1, 2, char_states[num_chars - 1])[1]
             last_char_lstm_state_rev = tf.split(1, 2, char_states_rev[num_chars - 1])[1]
@@ -115,7 +121,8 @@ class Tagger(object):
                 cell=lstm,
                 inputs=inputs, dtype=tf.float32,
                 initial_state=self.forward_initial_state)#,
-                #sequence_length=self.sentence_lengths)
+            tf.get_variable_scope().reuse_variables()
+            regularize.append(tf.get_variable('RNN/BasicLSTMCell/Linear/Matrix'))
 
         with tf.variable_scope('backward'):
             lstm_rev = rnn_cell.BasicLSTMCell(self.lstm_size)
@@ -123,6 +130,8 @@ class Tagger(object):
                 cell=lstm_rev,
                 inputs=list(reversed(inputs)), dtype=tf.float32,
                 initial_state=self.backward_initial_state)
+            tf.get_variable_scope().reuse_variables()
+            regularize.append(tf.get_variable('RNN/BasicLSTMCell/Linear/Matrix'))
 
         outputs_bidi = [tf.concat(1, [o1, o2]) for o1, o2 in zip(outputs, reversed(outputs_rev))]
 
@@ -133,10 +142,13 @@ class Tagger(object):
         # computing the loss, it is done by the sequence_loss_by_example and
         # during the runtime classification, the argmax over logits is enough.
 
+        softmax_w = tf.get_variable("softmax_w", [2 * self.lstm_size, len(tagset)])
         logits_flatten = tf.nn.xw_plus_b(
             output,
-            tf.get_variable("softmax_w", [2 * self.lstm_size, len(tagset)]),
+            softmax_w,
             tf.get_variable("softmax_b", [len(tagset)]))
+        #tf.get_variable_scope().reuse_variables()
+        regularize.append(softmax_w)
 
         self.logits = tf.reshape(logits_flatten, [-1, num_steps, len(tagset)], name="reshape-logits")
         estimated_tags_flat = tf.to_int32(tf.argmax(logits_flatten, dimension=1))
@@ -195,6 +207,8 @@ class Tagger(object):
 
                 decoder_cell = rnn_cell.BasicLSTMCell(lemma_state_size)
                 lemma_outputs_train, _ = seq2seq.rnn_decoder(embedded_lemma_characters, output, decoder_cell)
+                tf.get_variable_scope().reuse_variables()
+                regularize.append(tf.get_variable('RNN/BasicLSTMCell/Linear/Matrix'))
 
                 tf.get_variable_scope().reuse_variables()
                 lemma_outputs_runtime, _ = \
@@ -233,6 +247,10 @@ class Tagger(object):
 
                 self.cost += tf.reduce_mean(lemmatizer_loss)
 
+        self.cost += l2 * sum([tf.nn.l2_loss(variable) for variable in regularize])
+
+        tf.scalar_summary('train_optimization_cost', self.cost, collections=["train", "dev"])
+
         global_step = tf.Variable(0, trainable=False)
         def decay(learning_rate, exponent, iteration_steps):
             return tf.train.exponential_decay(learning_rate, global_step,
@@ -250,7 +268,7 @@ class Tagger(object):
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
             self.summary_writer = tf.train.SummaryWriter("logs/"+timestamp, self.session.graph_def)
 
-        self.steps = 0 # TODO: should be probably elsewhere
+        self.steps = 0
 
 
     def learn(self, words, chars, tags, lengths, lemma_chars):
@@ -272,12 +290,13 @@ class Tagger(object):
 
         _, cost, summary_str = \
                 self.session.run([self.train, self.cost, self.summary_train], feed_dict=fd)
-        self.summary_writer.add_summary(summary_str, self.steps)
+        if self.steps % 10 == 0:
+            self.summary_writer.add_summary(summary_str, self.steps)
 
         return cost
 
 
-    def predict_and_eval(self, words, chars, lengths, tags, lemma_chars):
+    def predict_and_eval(self, words, chars, lengths, tags, lemma_chars, out_summaries=True):
         """Predict tags for the given minibatch."""
 
         initial_state = np.zeros([words.shape[0], 2 * self.lstm_size])
@@ -300,7 +319,8 @@ class Tagger(object):
             logits, summary_str = \
                     self.session.run([self.logits, self.summary_dev], feed_dict=fd)
             lemmas = None
-        self.summary_writer.add_summary(summary_str, self.steps)
+        if out_summaries:
+            self.summary_writer.add_summary(summary_str, self.steps)
 
         return np.argmax(logits, axis=2), lemmas
 

@@ -131,8 +131,10 @@ def lemma_from_indices(tagger, lemma_char_indices):
 def taste_tagger(tagger, batches):
     """Print out first 3 examples of the first batch tagged by the model."""
     mb_x, chars, mb_y, lengths, mb_lemma_chars = batches[0]
-    mb_y_hat, mb_lemma_chars_hat = tagger.predict_and_eval(mb_x, chars, lengths, mb_y, mb_lemma_chars)
+    mb_y_hat, mb_lemma_chars_hat = \
+            tagger.predict_and_eval(mb_x, chars, lengths, mb_y, mb_lemma_chars, out_summaries=False)
 
+    # if there lemmatization is disabled, behave like empty strings have been decoded
     if not mb_lemma_chars_hat:
         mb_lemma_chars_hat = mb_lemma_chars * 0 + tagger.alphabet[u"</w>"]
 
@@ -185,7 +187,7 @@ def eval_tagger(tagger, batches):
                 tf.Summary.Value(tag="lemma_length_diff", simple_value=lemma_len_diff / lemma_count)
             ]
         else:
-            lemma_count = 1
+            lemma_count = 1 # to avoid division by zerou in the return statement
         external_str = tf.Summary(value=summary_values)
         tagger.summary_writer.add_summary(external_str, tagger.steps)
 
@@ -218,7 +220,8 @@ def main(args):
                     num_chars=args.max_word_length,
                     num_steps=args.max_sentence_length,
                     optimizer_desc=args.optimizer,
-                    generate_lemmas=args.generate_lemmas)
+                    generate_lemmas=args.generate_lemmas,
+                    l2=args.l2)
 
     batches_train = train_data.prepare_batches(
         args.batch_size, args.max_sentence_length, args.max_word_length)
@@ -308,6 +311,8 @@ if __name__ == '__main__':
                         help='Maximum number of training epochs.')
     parser.add_argument('--generate-lemmas', default=False, type=bool,
                         help='Generate lemmas during tagging.')
+    parser.add_argument('--l2', default=0.0, type=float,
+                        help='L2 regularization.')
     args = parser.parse_args()
 
     main(args)
