@@ -213,7 +213,7 @@ class Tagger(object):
                 decoder_cell = rnn_cell.BasicLSTMCell(lemma_state_size)
                 lemma_outputs_train, _ = seq2seq.rnn_decoder(embedded_lemma_characters, output_dropped, decoder_cell)
                 tf.get_variable_scope().reuse_variables()
-                regularize.append(tf.get_variable('RNN/BasicLSTMCell/Linear/Matrix'))
+                regularize.append(tf.get_variable('rnn_decoder/BasicLSTMCell/Linear/Matrix'))
 
                 tf.get_variable_scope().reuse_variables()
                 lemma_outputs_runtime, _ = \
