@@ -10,7 +10,7 @@ class Tagger(object):
     """LSTM tagger model."""
     def __init__(self, vocab, tagset, alphabet, word_embedding_size,
                  char_embedding_size, num_chars, num_steps, optimizer_desc,
-                 generate_lemmas, l2, experiment_name, seed=None, write_summaries=True):
+                 generate_lemmas, l2, dropout_prob_values, experiment_name, seed=None, write_summaries=True):
         """
         Builds the tagger computation graph and initializes it in a TensorFlow
         session.
@@ -52,11 +52,13 @@ class Tagger(object):
         self.tagset = tagset
         self.alphabet = alphabet
 
+        self.dropout_prob_values = dropout_prob_values
+
         self.forward_initial_state = tf.placeholder(tf.float32, [None, rnn_cell.BasicLSTMCell(self.lstm_size).state_size], name="forward_lstm_initial_state")
         self.backward_initial_state = tf.placeholder(tf.float32, [None, rnn_cell.BasicLSTMCell(self.lstm_size).state_size], name="backward_lstm_initial_state")
         self.sentence_lengths = tf.placeholder(tf.int64, [None], name="sentence_lengths")
         self.tags = tf.placeholder(tf.int32, [None, num_steps], name="ground_truth_tags")
-        self.dropout_prob = tf.placeholder(tf.float32, [1], name="dropout_keep_p")
+        self.dropout_prob = tf.placeholder(tf.float32, [None], name="dropout_keep_p")
         self.generate_lemmas = generate_lemmas
 
         input_list = []
@@ -113,7 +115,8 @@ class Tagger(object):
             input_list.append(char_output)
 
         # All inputs correctly sliced
-        inputs = [tf.squeeze(input_, [1]) for input_ in tf.split(1, num_steps, tf.concat(2, input_list))]
+        input_list_dropped = [tf.nn.dropout(x, self.dropout_prob[0]) for x in input_list]
+        inputs = [tf.squeeze(input_, [1]) for input_ in tf.split(1, num_steps, tf.concat(2, input_list_dropped))]
 
         with tf.variable_scope('forward'):
             lstm = rnn_cell.BasicLSTMCell(self.lstm_size)
@@ -138,13 +141,15 @@ class Tagger(object):
         output = tf.reshape(tf.concat(1, outputs_bidi), [-1, 2 * self.lstm_size],
                             name="reshape-outputs_bidi")
 
+        output_dropped = tf.nn.dropout(output, self.dropout_prob[1])
+
         # We are computing only the logits, not the actual softmax -- while
         # computing the loss, it is done by the sequence_loss_by_example and
         # during the runtime classification, the argmax over logits is enough.
 
         softmax_w = tf.get_variable("softmax_w", [2 * self.lstm_size, len(tagset)])
         logits_flatten = tf.nn.xw_plus_b(
-            output,
+            output_dropped,
             softmax_w,
             tf.get_variable("softmax_b", [len(tagset)]))
         #tf.get_variable_scope().reuse_variables()
@@ -206,13 +211,13 @@ class Tagger(object):
                     embedded_lemma_characters.append(tf.nn.embedding_lookup(lemma_char_embeddings, lemma_chars))
 
                 decoder_cell = rnn_cell.BasicLSTMCell(lemma_state_size)
-                lemma_outputs_train, _ = seq2seq.rnn_decoder(embedded_lemma_characters, output, decoder_cell)
+                lemma_outputs_train, _ = seq2seq.rnn_decoder(embedded_lemma_characters, output_dropped, decoder_cell)
                 tf.get_variable_scope().reuse_variables()
                 regularize.append(tf.get_variable('RNN/BasicLSTMCell/Linear/Matrix'))
 
                 tf.get_variable_scope().reuse_variables()
                 lemma_outputs_runtime, _ = \
-                        seq2seq.rnn_decoder(embedded_lemma_characters, output, decoder_cell,
+                        seq2seq.rnn_decoder(embedded_lemma_characters, output_dropped, decoder_cell,
                                             loop_function=loop)
 
                 lemma_char_logits_train = \
@@ -280,7 +285,7 @@ class Tagger(object):
         fd = {
             self.tags:tags,
             self.sentence_lengths: lengths,
-            self.dropout_prob: np.array([0.5]),
+            self.dropout_prob: self.dropout_prob_values,
             self.forward_initial_state: initial_state,
             self.backward_initial_state: initial_state
         }
@@ -304,7 +309,7 @@ class Tagger(object):
         fd = {
             self.tags:tags,
             self.sentence_lengths: lengths,
-            self.dropout_prob: np.array([1]),
+            self.dropout_prob: np.array([1, 1]),
             self.forward_initial_state: initial_state,
             self.backward_initial_state: initial_state
         }
@@ -342,7 +347,7 @@ class Tagger(object):
 
             fd = {
                 self.sentence_lengths: [self.num_steps],
-                self.dropout_prob: np.array([1]),
+                self.dropout_prob: np.array([1, 1]),
                 self.forward_initial_state: initial_state,
                 self.backward_initial_state: backward_initial_state
             }

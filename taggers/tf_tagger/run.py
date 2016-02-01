@@ -222,6 +222,7 @@ def main(args):
                     optimizer_desc=args.optimizer,
                     generate_lemmas=args.generate_lemmas,
                     l2=args.l2,
+                    dropout_prob_values=[float(x) for x in args.dropout.split(",")],
                     experiment_name=args.exp_name)
 
     batches_train = train_data.prepare_batches(
@@ -314,6 +315,8 @@ if __name__ == '__main__':
                         help='Generate lemmas during tagging.')
     parser.add_argument('--l2', default=0.0, type=float,
                         help='L2 regularization.')
+    parser.add_argument('--dropout', default="1,1", type=str,
+                        help='Dropout keep probability values (formatted as "x,y").')
     parser.add_argument('--exp-name', default="", type=str,
                         help='Experiment name.')
 
