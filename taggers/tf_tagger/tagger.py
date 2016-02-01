@@ -10,7 +10,7 @@ class Tagger(object):
     """LSTM tagger model."""
     def __init__(self, vocab, tagset, alphabet, word_embedding_size,
                  char_embedding_size, num_chars, num_steps, optimizer_desc,
-                 generate_lemmas, l2, seed=None, write_summaries=True):
+                 generate_lemmas, l2, experiment_name, seed=None, write_summaries=True):
         """
         Builds the tagger computation graph and initializes it in a TensorFlow
         session.
@@ -266,7 +266,7 @@ class Tagger(object):
             self.summary_train = tf.merge_summary(tf.get_collection("train"))
             self.summary_dev = tf.merge_summary(tf.get_collection("dev"))
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-            self.summary_writer = tf.train.SummaryWriter("logs/"+timestamp, self.session.graph_def)
+            self.summary_writer = tf.train.SummaryWriter("logs/"+timestamp+"_"+experiment_name, self.session.graph_def)
 
         self.steps = 0
 

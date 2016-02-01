@@ -221,7 +221,8 @@ def main(args):
                     num_steps=args.max_sentence_length,
                     optimizer_desc=args.optimizer,
                     generate_lemmas=args.generate_lemmas,
-                    l2=args.l2)
+                    l2=args.l2,
+                    experiment_name=args.exp_name)
 
     batches_train = train_data.prepare_batches(
         args.batch_size, args.max_sentence_length, args.max_word_length)
@@ -313,6 +314,9 @@ if __name__ == '__main__':
                         help='Generate lemmas during tagging.')
     parser.add_argument('--l2', default=0.0, type=float,
                         help='L2 regularization.')
+    parser.add_argument('--exp-name', default="", type=str,
+                        help='Experiment name.')
+
     args = parser.parse_args()
 
     main(args)
