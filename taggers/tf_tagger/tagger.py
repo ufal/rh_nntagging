@@ -250,7 +250,7 @@ class Tagger(object):
                 tf.scalar_summary('dev_lemma_loss_with_decoded_inputs',
                                   tf.reduce_mean(lemmatizer_loss_runtime), collections=["dev"])
 
-                self.cost += tf.reduce_mean(lemmatizer_loss)
+                self.cost += tf.reduce_mean(lemmatizer_loss) + tf.reduce_mean(lemmatizer_loss_runtime)
 
         self.cost += l2 * sum([tf.nn.l2_loss(variable) for variable in regularize])
 
