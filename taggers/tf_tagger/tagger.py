@@ -271,7 +271,7 @@ class Tagger(object):
             self.summary_train = tf.merge_summary(tf.get_collection("train"))
             self.summary_dev = tf.merge_summary(tf.get_collection("dev"))
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-            self.summary_writer = tf.train.SummaryWriter("logs/"+timestamp+"_"+experiment_name, self.session.graph_def)
+            self.summary_writer = tf.train.SummaryWriter("logs/"+timestamp+"_"+experiment_name)
 
         self.steps = 0
 
