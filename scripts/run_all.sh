@@ -55,7 +55,7 @@ for command_line in "$@"; do
   description="${command_line// /}"
   description="${description//\//}"
   description="${description//,/}"
-  log="$dir/../taggers/$tagger/exp-$experiment/$description"
+  log="$dir/../taggers/$tagger/exp-$experiment/`date -Iseconds`_$description"
 
   if [ -z "$grid" ]; then
     "$dir"/run_tagger.sh -t"$tagger" -n"$experiment" "${training[@]}" "${testing[@]}" $command_line 2> >(trap "" SIGINT SIGQUIT; tee "$log.err" >&2) | (trap "" SIGINT SIGQUIT; tee "$log".out)
