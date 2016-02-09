@@ -135,7 +135,7 @@ def taste_tagger(tagger, batches):
             tagger.predict_and_eval(mb_x, chars, lengths, mb_y, mb_lemma_chars, out_summaries=False)
 
     # if there lemmatization is disabled, behave like empty strings have been decoded
-    if not mb_lemma_chars_hat:
+    if mb_lemma_chars_hat is None:
         mb_lemma_chars_hat = mb_lemma_chars * 0 + tagger.alphabet[u"</w>"]
 
     for x, y, y_hat, lemma_chars, lemma_chars_hat in \
@@ -163,7 +163,7 @@ def eval_tagger(tagger, batches):
     for mb_x, chars, mb_y, lengths, mb_lemma_chars in batches:
         mb_y_hat, mb_lemma_chars_hat = tagger.predict_and_eval(mb_x, chars, lengths, mb_y, mb_lemma_chars)
 
-        if mb_lemma_chars_hat:
+        if mb_lemma_chars_hat is not None:
             for length, lemma_chars, lemma_chars_hat in zip(lengths, mb_lemma_chars, mb_lemma_chars_hat):
                 for t in range(min(tagger.num_steps, length)):
                     gt_lemma = lemma_from_indices(tagger, lemma_chars[t])
