@@ -237,7 +237,7 @@ class Tagger(object):
                     [tf.matmul(o, lemma_w) + lemma_b for o in lemma_outputs_runtime]
 
                 self.lemmas_decoded = \
-                    tf.reshape(tf.argmax(tf.concat(0, lemma_char_logits_runtime), 1), [-1, num_steps, num_chars + 1])
+                    tf.reshape(tf.transpose(tf.argmax(tf.pack(lemma_char_logits_runtime), 2)), [-1, num_steps, num_chars + 1])
 
                 lemma_char_weights = []
                 for lemma_chars in lemma_char_inputs[1:]:
