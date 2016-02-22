@@ -136,26 +136,28 @@ class Tagger(object):
             tf.get_variable_scope().reuse_variables()
             regularize.append(tf.get_variable('RNN/BasicLSTMCell/Linear/Matrix'))
 
-        outputs_forward = tf.reshape(tf.concat(1, outputs), [-1, self.lstm_size],
-                            name="reshape-outputs_forward")
+        #outputs_forward = tf.reshape(tf.concat(1, outputs), [-1, self.lstm_size],
+        #                    name="reshape-outputs_forward")
 
-        outputs_backward = tf.reshape(tf.concat(1, outputs_rev), [-1, self.lstm_size],
-                            name="reshape-outputs_backward")
+        #outputs_backward = tf.reshape(tf.concat(1, outputs_rev), [-1, self.lstm_size],
+        #                    name="reshape-outputs_backward")
 
-        forward_w = tf.get_variable("forward_w", [self.lstm_size, self.lstm_size])
-        backward_w = tf.get_variable("backward_w", [self.lstm_size, self.lstm_size])
-        non_linearity_bias = tf.get_variable("non_linearity_b", [self.lstm_size])
+        #forward_w = tf.get_variable("forward_w", [self.lstm_size, self.lstm_size])
+        #backward_w = tf.get_variable("backward_w", [self.lstm_size, self.lstm_size])
+        #non_linearity_bias = tf.get_variable("non_linearity_b", [self.lstm_size])
 
-        #outputs_bidi = [tf.concat(1, [o1, o2]) for o1, o2 in zip(outputs, reversed(outputs_rev))]
+        outputs_bidi = [tf.concat(1, [o1, o2]) for o1, o2 in zip(outputs, reversed(outputs_rev))]
 
-        output = tf.tanh(tf.matmul(outputs_forward, forward_w) + tf.matmul(outputs_backward, backward_w) + non_linearity_bias)
+        #output = tf.tanh(tf.matmul(outputs_forward, forward_w) + tf.matmul(outputs_backward, backward_w) + non_linearity_bias)
+        output = tf.reshape(tf.concat(1, outputs_bidi), [-1, 2 * self.lstm_size],
+                            name="reshape-outputs_bidi")
         output_dropped = tf.nn.dropout(output, self.dropout_prob[1])
 
         # We are computing only the logits, not the actual softmax -- while
         # computing the loss, it is done by the sequence_loss_by_example and
         # during the runtime classification, the argmax over logits is enough.
 
-        softmax_w = tf.get_variable("softmax_w", [self.lstm_size, len(tagset)])
+        softmax_w = tf.get_variable("softmax_w", [2 * self.lstm_size, len(tagset)])
         logits_flatten = tf.nn.xw_plus_b(
             output_dropped,
             softmax_w,
@@ -193,7 +195,7 @@ class Tagger(object):
                 self.lemma_chars = tf.placeholder(tf.int32, [None, num_steps, num_chars + 2],
                                                   name='lemma_chars')
 
-                lemma_state_size = self.lstm_size / 2
+                lemma_state_size = self.lstm_size
 
                 lemma_w = tf.Variable(tf.random_uniform([lemma_state_size, len(alphabet)], 0.5),
                                            name="state_to_char_w")
