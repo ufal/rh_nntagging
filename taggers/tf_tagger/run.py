@@ -223,7 +223,8 @@ def main(args):
                     generate_lemmas=args.generate_lemmas,
                     l2=args.l2,
                     dropout_prob_values=[float(x) for x in args.dropout.split(",")],
-                    experiment_name=args.exp_name)
+                    experiment_name=args.exp_name,
+                    supply_form_characters_to_lemma=args.supply_form_characters_to_lemma)
 
     batches_train = train_data.prepare_batches(
         args.batch_size, args.max_sentence_length, args.max_word_length)
@@ -313,6 +314,8 @@ if __name__ == '__main__':
                         help='Maximum number of training epochs.')
     parser.add_argument('--generate-lemmas', default=False, type=bool,
                         help='Generate lemmas during tagging.')
+    parser.add_argument('--supply-form-characters-to-lemma', default=False, type=bool,
+                        help='Supply i-th form letter during i-th lemma letter.')
     parser.add_argument('--l2', default=0.0, type=float,
                         help='L2 regularization.')
     parser.add_argument('--dropout', default="1,1", type=str,

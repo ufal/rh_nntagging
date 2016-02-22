@@ -10,7 +10,8 @@ class Tagger(object):
     """LSTM tagger model."""
     def __init__(self, vocab, tagset, alphabet, word_embedding_size,
                  char_embedding_size, num_chars, num_steps, optimizer_desc,
-                 generate_lemmas, l2, dropout_prob_values, experiment_name, seed=None, write_summaries=True):
+                 generate_lemmas, l2, dropout_prob_values, experiment_name,
+                 supply_form_characters_to_lemma, seed=None, write_summaries=True):
         """
         Builds the tagger computation graph and initializes it in a TensorFlow
         session.
@@ -201,7 +202,7 @@ class Tagger(object):
                                            name="state_to_char_w")
                 lemma_b = tf.Variable(tf.fill([len(alphabet)], - math.log(len(alphabet))),
                                            name="state_to_char_b")
-                lemma_char_embeddings = tf.Variable(tf.random_uniform([len(alphabet), lemma_state_size], -0.5, 0.5),
+                lemma_char_embeddings = tf.Variable(tf.random_uniform([len(alphabet), lemma_state_size / (2 if supply_form_characters_to_lemma else 1)], -0.5, 0.5),
                                                     name="char_embeddings")
 
                 lemma_char_inputs = \
@@ -209,16 +210,38 @@ class Tagger(object):
                         tf.split(1, num_chars + 2, tf.reshape(self.lemma_chars, [-1, num_chars + 2],
                                                               name="reshape-lemma_char_inputs"))]
 
-                def loop(prev_state, _):
-                    # it takes the previous hidden state, finds the character and formats it
-                    # as input for the next time step ... used in the decoder in the "real decoding scenario"
-                    out_activation = tf.matmul(prev_state, lemma_w) + lemma_b
-                    prev_char_index = tf.argmax(out_activation, 1)
-                    return tf.nn.embedding_lookup(lemma_char_embeddings, prev_char_index)
+                if supply_form_characters_to_lemma:
+                    char_inputs_zeros = \
+                        [tf.squeeze(chars, [1]) for chars in
+                            tf.split(1, num_chars, tf.reshape(self.chars, [-1, num_chars],
+                                                              name="reshape-char_inputs_zeros"))]
+                    char_inputs_zeros.append(char_inputs_zeros[0] * 0)
 
-                embedded_lemma_characters = []
-                for lemma_chars in lemma_char_inputs[:-1]:
-                    embedded_lemma_characters.append(tf.nn.embedding_lookup(lemma_char_embeddings, lemma_chars))
+                    def loop(prev_state, i):
+                        # it takes the previous hidden state, finds the character and formats it
+                        # as input for the next time step ... used in the decoder in the "real decoding scenario"
+                        out_activation = tf.matmul(prev_state, lemma_w) + lemma_b
+                        prev_char_index = tf.argmax(out_activation, 1)
+                        return tf.concat(1, [tf.nn.embedding_lookup(lemma_char_embeddings, prev_char_index),
+                                             tf.nn.embedding_lookup(lemma_char_embeddings, char_inputs_zeros[i])])
+
+                    embedded_lemma_characters = []
+                    for lemma_chars, form_chars in zip(lemma_char_inputs[:-1], char_inputs_zeros):
+                        embedded_lemma_characters.append(
+                            tf.concat(1, [tf.nn.embedding_lookup(lemma_char_embeddings, lemma_chars),
+                                          tf.nn.embedding_lookup(lemma_char_embeddings, form_chars)])
+                        )
+                else:
+                    def loop(prev_state, _):
+                        # it takes the previous hidden state, finds the character and formats it
+                        # as input for the next time step ... used in the decoder in the "real decoding scenario"
+                        out_activation = tf.matmul(prev_state, lemma_w) + lemma_b
+                        prev_char_index = tf.argmax(out_activation, 1)
+                        return tf.nn.embedding_lookup(lemma_char_embeddings, prev_char_index)
+
+                    embedded_lemma_characters = []
+                    for lemma_chars in lemma_char_inputs[:-1]:
+                        embedded_lemma_characters.append(tf.nn.embedding_lookup(lemma_char_embeddings, lemma_chars))
 
                 decoder_cell = rnn_cell.BasicLSTMCell(lemma_state_size)
                 lemma_outputs_train, _ = seq2seq.rnn_decoder(embedded_lemma_characters, output_dropped, decoder_cell)
