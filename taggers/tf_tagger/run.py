@@ -229,9 +229,8 @@ def main(args):
 
     batches_train = train_data.prepare_batches(
         args.batch_size, args.max_sentence_length, args.max_word_length)
-    # all development data are in one batch
     batches_dev = dev_data.prepare_batches(
-        len(dev_data.seqs), args.max_sentence_length, args.max_word_length)
+        args.batch_size, args.max_sentence_length, args.max_word_length)
 
     train_mgr = TrainingManager(
         len(batches_train), args.eval_interval,
