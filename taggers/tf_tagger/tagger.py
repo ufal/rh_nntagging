@@ -11,7 +11,7 @@ class Tagger(object):
     def __init__(self, vocab, tagset, alphabet, word_embedding_size,
                  char_embedding_size, num_chars, num_steps, optimizer_desc,
                  generate_lemmas, l2, dropout_prob_values, experiment_name,
-                 supply_form_characters_to_lemma, seed=None, write_summaries=True):
+                 supply_form_characters_to_lemma, threads=0, seed=None, write_summaries=True):
         """
         Builds the tagger computation graph and initializes it in a TensorFlow
         session.
@@ -298,7 +298,11 @@ class Tagger(object):
         optimizer = eval('tf.train.' + optimizer_desc)
         self.train = optimizer.minimize(self.cost, global_step=global_step)
 
-        self.session = tf.Session()
+        if threads > 0:
+            self.session = tf.Session(config=tf.ConfigProto(inter_op_parallelism_threads=threads,
+                                                            intra_op_parallelism_threads=threads))
+        else:
+            self.session = tf.Session()
         self.session.run(tf.initialize_all_variables())
 
         if write_summaries:
