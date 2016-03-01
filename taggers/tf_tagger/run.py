@@ -225,7 +225,8 @@ def main(args):
                     dropout_prob_values=[float(x) for x in args.dropout.split(",")],
                     experiment_name=args.exp_name,
                     supply_form_characters_to_lemma=args.supply_form_characters_to_lemma,
-                    threads=args.threads)
+                    threads=args.threads,
+                    use_attention=args.use_attention)
 
     batches_train = train_data.prepare_batches(
         args.batch_size, args.max_sentence_length, args.max_word_length)
@@ -324,6 +325,8 @@ if __name__ == '__main__':
                         help='Experiment name.')
     parser.add_argument('--threads', default=0, type=int,
                         help='Maximum number of threads to use.')
+    parser.add_argument('--use-attention', default=True, type=bool,
+                        help='Use attention decoder')
 
     args = parser.parse_args()
 

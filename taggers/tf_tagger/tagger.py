@@ -12,7 +12,7 @@ class Tagger(object):
     def __init__(self, vocab, tagset, alphabet, word_embedding_size,
                  char_embedding_size, num_chars, num_steps, optimizer_desc,
                  generate_lemmas, l2, dropout_prob_values, experiment_name,
-                 supply_form_characters_to_lemma, threads=0, seed=None, write_summaries=True):
+                 supply_form_characters_to_lemma, threads=0, seed=None, write_summaries=True, use_attention=True):
         """
         Builds the tagger computation graph and initializes it in a TensorFlow
         session.
@@ -84,9 +84,10 @@ class Tagger(object):
                 tf.Variable(tf.random_uniform([len(alphabet), char_embedding_size], -1.0, 1.0))
             ce_lookup = tf.nn.embedding_lookup(char_embeddings, self.chars)
 
+            reshaped_ce_lookup = tf.reshape(ce_lookup, [-1, num_chars, char_embedding_size],
+                                                             name="reshape-char_inputs")
             char_inputs = [tf.squeeze(input_, [1]) for input_ in
-                           tf.split(1, num_chars, tf.reshape(ce_lookup, [-1, num_chars, char_embedding_size],
-                                                             name="reshape-char_inputs"))]
+                           tf.split(1, num_chars, reshaped_ce_lookup)]
 
             char_inputs_lengths = tf.reshape(self.chars_lengths, [-1])
 
@@ -259,14 +260,26 @@ class Tagger(object):
                         embedded_lemma_characters.append(tf.nn.embedding_lookup(lemma_char_embeddings, lemma_chars))
 
                 decoder_cell = rnn_cell.BasicLSTMCell(lemma_state_size)
-                lemma_outputs_train, _ = seq2seq.rnn_decoder(embedded_lemma_characters, output_dropped, decoder_cell)
-                tf.get_variable_scope().reuse_variables()
-                regularize.append(tf.get_variable('rnn_decoder/BasicLSTMCell/Linear/Matrix'))
+
+                if use_attention:
+                    lemma_outputs_train, _ = seq2seq.attention_decoder(embedded_lemma_characters, output_dropped, reshaped_ce_lookup, decoder_cell)
+                else:
+                    lemma_outputs_train, _ = seq2seq.rnn_decoder(embedded_lemma_characters, output_dropped, decoder_cell)
+
 
                 tf.get_variable_scope().reuse_variables()
-                lemma_outputs_runtime, _ = \
+                #regularize.append(tf.get_variable('attention_decoder/BasicLSTMCell/Linear/Matrix'))
+
+                tf.get_variable_scope().reuse_variables()
+
+                if use_attention:
+                    lemma_outputs_runtime, _ = \
+                        seq2seq.attention_decoder(embedded_lemma_characters, output_dropped, reshaped_ce_lookup, decoder_cell,
+                            loop_function=loop)
+                else:
+                    lemma_outputs_runtime, _ = \
                         seq2seq.rnn_decoder(embedded_lemma_characters, output_dropped, decoder_cell,
-                                            loop_function=loop)
+                            loop_function=loop)
 
                 lemma_char_logits_train = \
                     [tf.matmul(o, lemma_w) + lemma_b for o in lemma_outputs_train]
