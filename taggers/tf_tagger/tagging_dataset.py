@@ -73,10 +73,12 @@ class TaggingDataset(object):
         res_x = np.zeros((batch_size, max_seq_len), dtype='int32')
         res_c = np.zeros((batch_size, max_seq_len, max_word_len), dtype='int32')
         res_y = np.zeros((batch_size, max_seq_len), dtype='int32')
+
+        lengths = np.zeros((batch_size), dtype='int64')
         # this + 2 in lemma characters is for the special start and end symbols
         res_lemma_c = np.zeros((batch_size, max_seq_len, max_word_len + 2), dtype='int32')
-        lengths = np.zeros((batch_size), dtype='int64')
-
+        res_c_len = np.zeros((batch_size, max_seq_len), dtype='int64')
+        
         for i, (words, chars, tags, lemma_chars) in enumerate(batch):
             res_x[i, :min(len(words), max_seq_len)] = words[:min(len(words), max_seq_len)]
             res_y[i, :min(len(tags), max_seq_len)] = tags[:min(len(tags), max_seq_len)]
@@ -85,11 +87,12 @@ class TaggingDataset(object):
                 res_c[i, j, :min(len(chars[j]), max_word_len)] = chars[j][:min(len(chars[j]), max_word_len)]
                 res_lemma_c[i, j, :min(len(lemma_chars[j]), max_word_len + 2)] = \
                         lemma_chars[j][:min(len(lemma_chars[j]), max_word_len + 2 )]
+                res_c_len[i, j] = min(len(chars[j]), max_word_len)
 
 
-            lengths[i] = len(words)
+            lengths[i] = min(len(words), max_seq_len)
 
-        return res_x, res_c, res_y, lengths, res_lemma_c
+        return res_x, res_c, res_y, lengths, res_lemma_c, res_c_len
 
     @staticmethod
     def load_from_file(fname, vocab=None, alphabet=None, tags=None):

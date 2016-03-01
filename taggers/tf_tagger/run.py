@@ -130,9 +130,9 @@ def lemma_from_indices(tagger, lemma_char_indices):
 
 def taste_tagger(tagger, batches):
     """Print out first 3 examples of the first batch tagged by the model."""
-    mb_x, chars, mb_y, lengths, mb_lemma_chars = batches[0]
+    mb_x, chars, mb_y, lengths, mb_lemma_chars, chars_lengths = batches[0]
     mb_y_hat, mb_lemma_chars_hat = \
-            tagger.predict_and_eval(mb_x, chars, lengths, mb_y, mb_lemma_chars, out_summaries=False)
+            tagger.predict_and_eval(mb_x, chars, lengths, mb_y, mb_lemma_chars, chars_lengths, out_summaries=False)
 
     # if there lemmatization is disabled, behave like empty strings have been decoded
     if mb_lemma_chars_hat is None:
@@ -160,8 +160,8 @@ def eval_tagger(tagger, batches):
     lemma_len_diff = 0.0
     lemma_count = 0
 
-    for mb_x, chars, mb_y, lengths, mb_lemma_chars in batches:
-        mb_y_hat, mb_lemma_chars_hat = tagger.predict_and_eval(mb_x, chars, lengths, mb_y, mb_lemma_chars)
+    for mb_x, chars, mb_y, lengths, mb_lemma_chars, chars_lengths in batches:
+        mb_y_hat, mb_lemma_chars_hat = tagger.predict_and_eval(mb_x, chars, lengths, mb_y, mb_lemma_chars, chars_lengths)
 
         if mb_lemma_chars_hat is not None:
             for length, lemma_chars, lemma_chars_hat in zip(lengths, mb_lemma_chars, mb_lemma_chars_hat):
@@ -230,7 +230,7 @@ def main(args):
     batches_train = train_data.prepare_batches(
         args.batch_size, args.max_sentence_length, args.max_word_length)
     batches_dev = dev_data.prepare_batches(
-        args.batch_size, args.max_sentence_length, args.max_word_length)
+        2100, args.max_sentence_length, args.max_word_length)
 
     train_mgr = TrainingManager(
         len(batches_train), args.eval_interval,
@@ -255,10 +255,10 @@ def main(args):
             if not permuted_batches:
                 permuted_batches = batches_train[:]
                 random.shuffle(permuted_batches)
-            words, chars, tags, lengths, lemma_chars = permuted_batches.pop()
+            words, chars, tags, lengths, lemma_chars, chars_lengths = permuted_batches.pop()
             oov_mask = np.vectorize(lambda x: train_data.vocab.count(x) == 1 and np.random.uniform() < args.oov_sampling_p)(words)
             words = np.where(oov_mask, np.zeros(words.shape), words)
-            mb_loss = tagger.learn(words, chars, tags, lengths, lemma_chars)
+            mb_loss = tagger.learn(words, chars, tags, lengths, lemma_chars, chars_lengths)
 
             train_mgr.tick(mb_loss=mb_loss, force_eval=force_eval["value"])
             force_eval["value"] = False

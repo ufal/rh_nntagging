@@ -3,6 +3,7 @@ import numpy as np
 import tensorflow as tf
 import datetime
 
+from tensorflow.python.ops import array_ops
 from tensorflow.models.rnn import rnn_cell, rnn, seq2seq
 
 
@@ -77,6 +78,7 @@ class Tagger(object):
         # Character-level embeddings
         if char_embedding_size:
             self.chars = tf.placeholder(tf.int32, [None, num_steps, num_chars], name='chars')
+            self.chars_lengths = tf.placeholder(tf.int64, [None, num_steps], name='chars_lengths')
 
             char_embeddings = \
                 tf.Variable(tf.random_uniform([len(alphabet), char_embedding_size], -1.0, 1.0))
@@ -86,25 +88,33 @@ class Tagger(object):
                            tf.split(1, num_chars, tf.reshape(ce_lookup, [-1, num_chars, char_embedding_size],
                                                              name="reshape-char_inputs"))]
 
+            char_inputs_lengths = tf.reshape(self.chars_lengths, [-1])
+
             with tf.variable_scope('char_forward'):
                 char_lstm = rnn_cell.BasicLSTMCell(char_embedding_size)
-                char_outputs, char_states = rnn.rnn(
+                _, char_last_state = rnn.rnn(
                     cell=char_lstm,
-                    inputs=char_inputs, dtype=tf.float32)
+                    inputs=char_inputs,
+                    sequence_length=char_inputs_lengths,
+                    dtype=tf.float32)
                 tf.get_variable_scope().reuse_variables()
                 regularize.append(tf.get_variable('RNN/BasicLSTMCell/Linear/Matrix'))
 
 
             with tf.variable_scope('char_backward'):
                 char_lstm_rev = rnn_cell.BasicLSTMCell(char_embedding_size)
-                char_outputs_rev, char_states_rev = rnn.rnn(
+                _, char_last_state_rev = rnn.rnn(
                     cell=char_lstm_rev,
-                    inputs=list(reversed(char_inputs)), dtype=tf.float32)
+                    inputs=self._reverse_seq(char_inputs, char_inputs_lengths), 
+                    sequence_length=char_inputs_lengths,
+                    dtype=tf.float32)
                 tf.get_variable_scope().reuse_variables()
                 regularize.append(tf.get_variable('RNN/BasicLSTMCell/Linear/Matrix'))
 
-            last_char_lstm_state = tf.split(1, 2, char_states[num_chars - 1])[1]
-            last_char_lstm_state_rev = tf.split(1, 2, char_states_rev[num_chars - 1])[1]
+                
+
+            last_char_lstm_state = tf.split(1, 2, char_last_state)[1]
+            last_char_lstm_state_rev = tf.split(1, 2, char_last_state_rev)[1]
 
             last_char_states = \
                 tf.reshape(last_char_lstm_state, [-1, num_steps, char_embedding_size],
@@ -121,19 +131,25 @@ class Tagger(object):
 
         with tf.variable_scope('forward'):
             lstm = rnn_cell.BasicLSTMCell(self.lstm_size)
-            outputs, states = rnn.rnn(
+            outputs, last_state = rnn.rnn(
                 cell=lstm,
                 inputs=inputs, dtype=tf.float32,
-                initial_state=self.forward_initial_state)#,
+                initial_state=self.forward_initial_state,
+                sequence_length=self.sentence_lengths)
+
             tf.get_variable_scope().reuse_variables()
             regularize.append(tf.get_variable('RNN/BasicLSTMCell/Linear/Matrix'))
 
         with tf.variable_scope('backward'):
             lstm_rev = rnn_cell.BasicLSTMCell(self.lstm_size)
-            outputs_rev, states_rev = rnn.rnn(
+            outputs_rev_rev, last_state_rev = rnn.rnn(
                 cell=lstm_rev,
-                inputs=list(reversed(inputs)), dtype=tf.float32,
-                initial_state=self.backward_initial_state)
+                inputs=self._reverse_seq(inputs, self.sentence_lengths), dtype=tf.float32,
+                initial_state=self.backward_initial_state,
+                sequence_length=self.sentence_lengths)
+
+            outputs_rev=self._reverse_seq(outputs_rev_rev, self.sentence_lengths)
+
             tf.get_variable_scope().reuse_variables()
             regularize.append(tf.get_variable('RNN/BasicLSTMCell/Linear/Matrix'))
 
@@ -168,7 +184,7 @@ class Tagger(object):
 
         self.logits = tf.reshape(logits_flatten, [-1, num_steps, len(tagset)], name="reshape-logits")
         estimated_tags_flat = tf.to_int32(tf.argmax(logits_flatten, dimension=1))
-        self.states = states
+        self.last_state = last_state
 
         # output maks: compute loss only if it insn't a padded word (i.e. zero index)
         output_mask = tf.reshape(tf.to_float(tf.not_equal(self.tags, 0)), [-1])
@@ -177,8 +193,7 @@ class Tagger(object):
         tagging_loss = seq2seq.sequence_loss_by_example(
             logits=[logits_flatten],
             targets=[gt_tags_flat],
-            weights=[output_mask],
-            num_decoder_symbols=len(tagset))
+            weights=[output_mask])
 
         tagging_accuracy = \
             tf.reduce_sum(tf.to_float(tf.equal(estimated_tags_flat, gt_tags_flat)) * output_mask) \
@@ -267,11 +282,11 @@ class Tagger(object):
                     lemma_char_weights.append(tf.to_float(tf.not_equal(lemma_chars, 0)))
 
                 lemmatizer_loss = seq2seq.sequence_loss(lemma_char_logits_train, lemma_char_inputs[1:],
-                                                        lemma_char_weights, len(alphabet))
+                                                        lemma_char_weights)
 
                 lemmatizer_loss_runtime = \
                         seq2seq.sequence_loss(lemma_char_logits_runtime, lemma_char_inputs[1:],
-                                              lemma_char_weights, len(alphabet))
+                                              lemma_char_weights)
 
                 tf.scalar_summary('train_lemma_loss_with_gt_inputs',
                                   tf.reduce_mean(lemmatizer_loss), collections=["train"])
@@ -314,7 +329,7 @@ class Tagger(object):
         self.steps = 0
 
 
-    def learn(self, words, chars, tags, lengths, lemma_chars):
+    def learn(self, words, chars, tags, lengths, lemma_chars, chars_lengths):
         """Learn from the given minibatch."""
 
         initial_state = np.zeros([words.shape[0], 2 * self.lstm_size])
@@ -328,7 +343,9 @@ class Tagger(object):
             self.backward_initial_state: initial_state
         }
         if self.word_embedding_size: fd[self.words] = words
-        if self.char_embedding_size: fd[self.chars] = chars
+        if self.char_embedding_size:
+            fd[self.chars] = chars
+            fd[self.chars_lengths] = chars_lengths
         if self.generate_lemmas: fd[self.lemma_chars] = lemma_chars
 
         _, cost, summary_str = \
@@ -339,7 +356,7 @@ class Tagger(object):
         return cost
 
 
-    def predict_and_eval(self, words, chars, lengths, tags, lemma_chars, out_summaries=True):
+    def predict_and_eval(self, words, chars, lengths, tags, lemma_chars, chars_lengths, out_summaries=True):
         """Predict tags for the given minibatch."""
 
         initial_state = np.zeros([words.shape[0], 2 * self.lstm_size])
@@ -352,7 +369,9 @@ class Tagger(object):
             self.backward_initial_state: initial_state
         }
         if self.word_embedding_size: fd[self.words] = words
-        if self.char_embedding_size: fd[self.chars] = chars
+        if self.char_embedding_size:
+            fd[self.chars] = chars
+            fd[self.chars_lengths] = chars_lengths
         if self.generate_lemmas: fd[self.lemma_chars] = lemma_chars
 
         if self.generate_lemmas:
@@ -392,9 +411,39 @@ class Tagger(object):
             if self.word_embedding_size: fd[self.words] = w
             if self.char_embedding_size: fd[self.chars] = c
 
-            logits, state = self.session.run([self.logits, self.states[-1]], feed_dict=fd)
+            logits, state = self.session.run([self.logits, self.last_state], feed_dict=fd)
 
             initial_state = state
             tags.extend(np.argmax(logits[0], axis=1))
 
         return [int(x) for x in tags[:len(words)]]
+
+
+    
+    def _reverse_seq(self, input_seq, lengths):
+      """Reverse a list of Tensors up to specified lengths.
+    
+      Args:
+        input_seq: Sequence of seq_len tensors of dimension (batch_size, depth)
+        lengths:   A tensor of dimension batch_size, containing lengths for each
+                   sequence in the batch. If "None" is specified, simply reverses
+                   the list.
+    
+      Returns:
+        time-reversed sequence
+      """
+      if lengths is None:
+        return list(reversed(input_seq))
+    
+      for input_ in input_seq:
+        input_.set_shape(input_.get_shape().with_rank(2))
+    
+      # Join into (time, batch_size, depth)
+      s_joined = array_ops.pack(input_seq)
+    
+      # Reverse along dimension 0
+      s_reversed = array_ops.reverse_sequence(s_joined, lengths, 0, 1)
+      # Split again into list
+      result = array_ops.unpack(s_reversed)
+      return result
+    
