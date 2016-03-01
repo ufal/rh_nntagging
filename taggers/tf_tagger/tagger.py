@@ -12,7 +12,7 @@ class Tagger(object):
     def __init__(self, vocab, tagset, alphabet, word_embedding_size,
                  char_embedding_size, num_chars, num_steps, optimizer_desc,
                  generate_lemmas, l2, dropout_prob_values, experiment_name,
-                 supply_form_characters_to_lemma, threads=0, seed=None, write_summaries=True, use_attention=True):
+                 supply_form_characters_to_lemma, threads=0, seed=None, write_summaries=True, use_attention=True, scheduled_sampling=None):
         """
         Builds the tagger computation graph and initializes it in a TensorFlow
         session.
@@ -63,8 +63,9 @@ class Tagger(object):
         self.dropout_prob = tf.placeholder(tf.float32, [None], name="dropout_keep_p")
         self.generate_lemmas = generate_lemmas
 
-        input_list = []
+        global_step = tf.Variable(0, trainable=False)
 
+        input_list = []
         regularize = []
 
         # Word-level embeddings
@@ -259,12 +260,24 @@ class Tagger(object):
                     for lemma_chars in lemma_char_inputs[:-1]:
                         embedded_lemma_characters.append(tf.nn.embedding_lookup(lemma_char_embeddings, lemma_chars))
 
+
+                def sampling_loop(prev_state, i):
+                    threshold = scheduled_sampling / (scheduled_sampling + tf.exp(tf.to_float(global_step)))
+                    condition = tf.less_equal(tf.random_uniform(tf.shape(embedded_lemma_characters[0])), threshold)
+                    return tf.select(condition, embedded_lemma_characters[i], loop(prev_state,i))
+
                 decoder_cell = rnn_cell.BasicLSTMCell(lemma_state_size)
 
-                if use_attention:
-                    lemma_outputs_train, _ = seq2seq.attention_decoder(embedded_lemma_characters, output_dropped, reshaped_ce_lookup, decoder_cell)
+                if scheduled_sampling:
+                    lf = sampling_loop
                 else:
-                    lemma_outputs_train, _ = seq2seq.rnn_decoder(embedded_lemma_characters, output_dropped, decoder_cell)
+                    lf = None
+
+
+                if use_attention:
+                    lemma_outputs_train, _ = seq2seq.attention_decoder(embedded_lemma_characters, output_dropped, reshaped_ce_lookup, decoder_cell, loop_function=lf)
+                else:
+                    lemma_outputs_train, _ = seq2seq.rnn_decoder(embedded_lemma_characters, output_dropped, decoder_cell, loop_function=lf)
 
 
                 tf.get_variable_scope().reuse_variables()
@@ -318,7 +331,6 @@ class Tagger(object):
         tf.scalar_summary('train_optimization_cost', self.cost, collections=["train"])
         tf.scalar_summary('dev_optimization_cost', self.cost, collections=["dev"])
 
-        global_step = tf.Variable(0, trainable=False)
         def decay(learning_rate, exponent, iteration_steps):
             return tf.train.exponential_decay(learning_rate, global_step,
                                               iteration_steps, exponent, staircase=True)

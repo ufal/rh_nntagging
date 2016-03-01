@@ -226,7 +226,8 @@ def main(args):
                     experiment_name=args.exp_name,
                     supply_form_characters_to_lemma=args.supply_form_characters_to_lemma,
                     threads=args.threads,
-                    use_attention=args.use_attention)
+                    use_attention=args.use_attention,
+                    scheduled_sampling=args.scheduled_sampling)
 
     batches_train = train_data.prepare_batches(
         args.batch_size, args.max_sentence_length, args.max_word_length)
@@ -327,6 +328,8 @@ if __name__ == '__main__':
                         help='Maximum number of threads to use.')
     parser.add_argument('--use-attention', default=True, type=bool,
                         help='Use attention decoder')
+    parser.add_argument('--scheduled-sampling', default=None, type=float,
+                        help='Scheduled sampling parameter')
 
     args = parser.parse_args()
 
