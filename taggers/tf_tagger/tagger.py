@@ -538,7 +538,7 @@ class Tagger(object):
                 fd[self.char_encoder.chars] = c
                 fd[self.char_encoder.word_lengths] = lens
 
-            logits, state = self.session.run([self.tagging_lstm.logits, self.last_state], feed_dict=fd)
+            logits, state = self.session.run([self.tagging_lstm.logits, self.tagging_lstm.last_state], feed_dict=fd)
 
             initial_state = state
             tags.extend(np.argmax(logits[0], axis=1))
