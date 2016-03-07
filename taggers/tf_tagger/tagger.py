@@ -544,33 +544,3 @@ class Tagger(object):
             tags.extend(np.argmax(logits[0], axis=1))
 
         return [int(x) for x in tags[:len(words)]]
-
-
-    
-    def _reverse_seq(self, input_seq, lengths):
-      """Reverse a list of Tensors up to specified lengths.
-    
-      Args:
-        input_seq: Sequence of seq_len tensors of dimension (batch_size, depth)
-        lengths:   A tensor of dimension batch_size, containing lengths for each
-                   sequence in the batch. If "None" is specified, simply reverses
-                   the list.
-    
-      Returns:
-        time-reversed sequence
-      """
-      if lengths is None:
-        return list(reversed(input_seq))
-    
-      for input_ in input_seq:
-        input_.set_shape(input_.get_shape().with_rank(2))
-    
-      # Join into (time, batch_size, depth)
-      s_joined = array_ops.pack(input_seq)
-    
-      # Reverse along dimension 0
-      s_reversed = array_ops.reverse_sequence(s_joined, lengths, 0, 1)
-      # Split again into list
-      result = array_ops.unpack(s_reversed)
-      return result
-    
