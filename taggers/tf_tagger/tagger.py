@@ -7,6 +7,192 @@ from tensorflow.python.ops import array_ops
 from tensorflow.models.rnn import rnn_cell, rnn, seq2seq
 
 
+    
+def _reverse_seq(input_seq, lengths):
+    """Reverse a list of Tensors up to specified lengths.
+    
+      Args:
+    input_seq: Sequence of seq_len tensors of dimension (batch_size, depth)
+    lengths:   A tensor of dimension batch_size, containing lengths for each
+    sequence in the batch. If "None" is specified, simply reverses
+    the list.
+    
+      Returns:
+    time-reversed sequence
+    """
+    if lengths is None:
+        return list(reversed(input_seq))
+        
+    for input_ in input_seq:
+        input_.set_shape(input_.get_shape().with_rank(2))
+          
+    # Join into (time, batch_size, depth)
+    s_joined = array_ops.pack(input_seq)
+          
+    # Reverse along dimension 0
+    s_reversed = array_ops.reverse_sequence(s_joined, lengths, 0, 1)
+    # Split again into list
+    result = array_ops.unpack(s_reversed)
+    return result
+
+
+
+class CharacterEmbeddingEncoder(object):
+    """
+    Bidirectional LSTM character-level word embedding encoder for sentence-level operations
+
+    INPUTS:
+        list of characters (batch x num_steps x num_chars)
+        list of word lengths (batch x num_steps)
+
+    OUTPUTS:
+        flatten vector of character embeddings ((batch * num_steps) x num_chars x char_embedding_size)
+        combined last state of the bidirectional LSTM (batch x num_steps x char_embedding_size * 2)
+    """
+        
+    def __init__(self, alphabet, char_embedding_size, num_chars, num_steps):
+        """
+        Arguments:
+            alphabet: Vocabulary of possible characters
+            char_embedding_size: Size of the resulting character embedding
+            num_chars: Maximum word length
+            num_steps: Maximum sentence length
+        """
+
+        ## TODO rozhodnout, jestli umoznit rozdilny dylky pro embedding jednoho pismene a celyho slova
+        ## delalo by se to pres input_size argument BasicLSTMCell konstruktoru
+        
+        self.chars = tf.placeholder(tf.int32, [None, num_steps, num_chars], name='chars')
+        self.word_lengths = tf.placeholder(tf.int64, [None, num_steps], name='word_lengths')
+        word_lengths_flat = tf.reshape(self.word_lengths, [-1])
+
+        # alphabet x char_embedding_size
+        char_embeddings = tf.Variable(tf.random_uniform([len(alphabet), char_embedding_size], -1.0, 1.0))
+
+        # shape(self.chars) + shape(char_embeddings)[1:]
+        # batch x num_steps x num_chars x char_embedding_size
+        lookup = tf.nn.embedding_lookup(char_embeddings, self.chars)
+
+        # (batch * num_steps) x num_chars x char_embedding_size
+        lookup_reshaped = tf.reshape(lookup, [-1, num_chars, char_embedding_size], name="reshape-char-lookup")
+
+        # [list indexovany podle num_chars] (batch * num_steps) x char_embedding_size
+        char_inputs = [ tf.squeeze(input_, [1]) for input_ in tf.split(1, num_chars, lookup_reshaped) ]
+
+        with tf.variable_scope('char_forward'):
+            forward_lstm = rnn_cell.BasicLSTMCell(char_embedding_size)
+            _, forward_state = rnn.rnn(
+                cell=forward_lstm,
+                inputs=char_inputs,
+                sequence_length=word_lengths_flat,
+                dtype=tf.float32)
+
+            tf.get_variable_scope().reuse_variables()
+
+        with tf.variable_scope('char_backward'):
+            backward_lstm = rnn_cell.BasicLSTMCell(char_embedding_size)
+            _, backward_state = rnn.rnn(
+                cell=backward_lstm,
+                inputs=_reverse_seq(char_inputs, word_lengths_flat),
+                sequence_length=word_lengths_flat,
+                dtype=tf.float32)
+
+            tf.get_variable_scope().reuse_variables()
+
+        # NOTE stav je rozdelenej na dve pulky.
+        # - prvni je c (hodnota co zustava uvnitr lstm)
+        # - druha je h (tanh(c) + sigmoid(o), tj. hodnota, ktera se posila na output)
+        # TODO nechceme tedy brat spis prvni polovinu?
+            
+        # (batch * num_steps) x char_embedding_size
+        forward_states_flat = tf.split(1, 2, forward_state)[1]
+        backward_states_flat = tf.split(1, 2, backward_state)[1]
+
+        # batch x num_steps x char_embedding_size
+        forward_states = tf.reshape(forward_states_flat, [-1, num_steps, char_embedding_size])
+        backward_states = tf.reshape(backward_states_flat, [-1, num_steps, char_embedding_size])
+
+        # batch x num_steps x (char_embedding_size * 2)
+        self.outputs = tf.concat(2, [forward_states, backward_states])
+        self.lookup_reshaped = lookup_reshaped
+
+
+
+class BidirectionalLSTM(object):
+    """
+    Bidirectional LSTM model for tagging
+
+    INPUTS:
+        List of inputs. Each element in the list has to have shape (batch x num_steps x <input>)
+
+    OUTPUTS:
+        output from bidirectional lstm ((batch * num_steps) x (2 * lstm_size))
+        flatten logits ((batch * num_steps) x output_size)
+        argmax over flatten logits ((batch * num_steps) x output_size)
+        reshaped logits (batch x num_steps x output_size)
+        last LSTM forward state (batch x (2 * lstm_size))
+        
+    """
+
+    
+    def __init__(self, lstm_size, input_list, num_steps,
+                 forward_initial_state, backward_initial_state, sentence_lengths,
+                 dropout_out, output_size):
+        """
+        Arguments:
+            lstm_size: size of lstm output vector
+            input_list: list of input embeddings (word, char)
+            num_steps: maximum length of a sentence        
+        """
+
+        # [list indexovany podle num_steps] batch x (word_embedding_size + 2 * char_embedding_size)
+        inputs = [tf.squeeze(input_, [1]) for input_ in tf.split(1, num_steps, tf.concat(2, input_list))]
+
+        with tf.variable_scope('forward'):
+            forward_lstm = rnn_cell.BasicLSTMCell(lstm_size)
+            forward_outputs, forward_state = rnn.rnn(
+                cell=forward_lstm,
+                inputs=inputs,
+                initial_state=forward_initial_state,
+                sequence_length=sentence_lengths,
+                dtype=tf.float32)
+
+            tf.get_variable_scope().reuse_variables()
+
+        with tf.variable_scope('backward'):
+            backward_lstm = rnn_cell.BasicLSTMCell(lstm_size)
+            backward_outputs_reversed, backward_state = rnn.rnn(
+                cell=backward_lstm,
+                inputs=_reverse_seq(inputs, sentence_lengths),
+                initial_state=backward_initial_state,
+                sequence_length=sentence_lengths)
+
+            backward_outputs = _reverse_seq(backward_outputs_reversed, sentence_lengths)
+            tf.get_variable_scope().reuse_variables()
+
+        # [list indexovany podle num_steps] batch x (2 * lstm_size)
+        bidi_outputs = [tf.concat(1, [o1, o2]) for o1, o2 in zip(forward_outputs, reversed(backward_outputs))]
+
+        # (batch * num_steps) x (2 * lstm_size)
+        lstm_output = tf.reshape(tf.concat(1, bidi_outputs), [-1, 2 * lstm_size])
+        self.lstm_output = tf.nn.dropout(lstm_output, dropout_out)
+
+        # (batch * num_steps) x output_size
+        self.logits_flat = tf.nn.xw_plus_b(
+            lstm_output,
+            tf.get_variable('softmax_w', [2 * lstm_size, output_size]),
+            tf.get_variable('softmax_b', [output_size]))
+        
+        self.argmax = tf.to_int32(tf.argmax(self.logits_flat, dimension=1))
+        
+        # batch x num_steps x output_size
+        self.logits = tf.reshape(self.logits_flat, [-1, num_steps, output_size])
+
+        self.last_state = forward_state
+        
+        
+
+
 class Tagger(object):
     """LSTM tagger model."""
     def __init__(self, vocab, tagset, alphabet, word_embedding_size,
@@ -42,7 +228,7 @@ class Tagger(object):
 
             write_summaries: Write summaries using TensorFlow interface.
         """
-
+        
         self.num_steps = num_steps
         self.num_chars = num_chars
 
@@ -78,127 +264,39 @@ class Tagger(object):
 
         # Character-level embeddings
         if char_embedding_size:
-            self.chars = tf.placeholder(tf.int32, [None, num_steps, num_chars], name='chars')
-            self.chars_lengths = tf.placeholder(tf.int64, [None, num_steps], name='chars_lengths')
-
-            char_embeddings = \
-                tf.Variable(tf.random_uniform([len(alphabet), char_embedding_size], -1.0, 1.0))
-            ce_lookup = tf.nn.embedding_lookup(char_embeddings, self.chars)
-
-            reshaped_ce_lookup = tf.reshape(ce_lookup, [-1, num_chars, char_embedding_size],
-                                                             name="reshape-char_inputs")
-            char_inputs = [tf.squeeze(input_, [1]) for input_ in
-                           tf.split(1, num_chars, reshaped_ce_lookup)]
-
-            char_inputs_lengths = tf.reshape(self.chars_lengths, [-1])
-
-            with tf.variable_scope('char_forward'):
-                char_lstm = rnn_cell.BasicLSTMCell(char_embedding_size)
-                _, char_last_state = rnn.rnn(
-                    cell=char_lstm,
-                    inputs=char_inputs,
-                    sequence_length=char_inputs_lengths,
-                    dtype=tf.float32)
-                tf.get_variable_scope().reuse_variables()
-                regularize.append(tf.get_variable('RNN/BasicLSTMCell/Linear/Matrix'))
-
-
-            with tf.variable_scope('char_backward'):
-                char_lstm_rev = rnn_cell.BasicLSTMCell(char_embedding_size)
-                _, char_last_state_rev = rnn.rnn(
-                    cell=char_lstm_rev,
-                    inputs=self._reverse_seq(char_inputs, char_inputs_lengths), 
-                    sequence_length=char_inputs_lengths,
-                    dtype=tf.float32)
-                tf.get_variable_scope().reuse_variables()
-                regularize.append(tf.get_variable('RNN/BasicLSTMCell/Linear/Matrix'))
-
-                
-
-            last_char_lstm_state = tf.split(1, 2, char_last_state)[1]
-            last_char_lstm_state_rev = tf.split(1, 2, char_last_state_rev)[1]
-
-            last_char_states = \
-                tf.reshape(last_char_lstm_state, [-1, num_steps, char_embedding_size],
-                           name="reshape-charstates")
-            last_char_states_rev = tf.reshape(last_char_lstm_state_rev, [-1, num_steps, char_embedding_size], name="reshape-charstates_rev")
-
-            char_output = tf.concat(2, [last_char_states, last_char_states_rev])
-
-            input_list.append(char_output)
+            self.char_encoder = CharacterEmbeddingEncoder(
+                self.alphabet,
+                self.char_embedding_size,
+                self.num_chars,
+                self.num_steps)
+            
+            input_list.append(self.char_encoder.outputs)
 
         # All inputs correctly sliced
         input_list_dropped = [tf.nn.dropout(x, self.dropout_prob[0]) for x in input_list]
-        inputs = [tf.squeeze(input_, [1]) for input_ in tf.split(1, num_steps, tf.concat(2, input_list_dropped))]
 
-        with tf.variable_scope('forward'):
-            lstm = rnn_cell.BasicLSTMCell(self.lstm_size)
-            outputs, last_state = rnn.rnn(
-                cell=lstm,
-                inputs=inputs, dtype=tf.float32,
-                initial_state=self.forward_initial_state,
-                sequence_length=self.sentence_lengths)
-
-            tf.get_variable_scope().reuse_variables()
-            regularize.append(tf.get_variable('RNN/BasicLSTMCell/Linear/Matrix'))
-
-        with tf.variable_scope('backward'):
-            lstm_rev = rnn_cell.BasicLSTMCell(self.lstm_size)
-            outputs_rev_rev, last_state_rev = rnn.rnn(
-                cell=lstm_rev,
-                inputs=self._reverse_seq(inputs, self.sentence_lengths), dtype=tf.float32,
-                initial_state=self.backward_initial_state,
-                sequence_length=self.sentence_lengths)
-
-            outputs_rev=self._reverse_seq(outputs_rev_rev, self.sentence_lengths)
-
-            tf.get_variable_scope().reuse_variables()
-            regularize.append(tf.get_variable('RNN/BasicLSTMCell/Linear/Matrix'))
-
-        #outputs_forward = tf.reshape(tf.concat(1, outputs), [-1, self.lstm_size],
-        #                    name="reshape-outputs_forward")
-
-        #outputs_backward = tf.reshape(tf.concat(1, outputs_rev), [-1, self.lstm_size],
-        #                    name="reshape-outputs_backward")
-
-        #forward_w = tf.get_variable("forward_w", [self.lstm_size, self.lstm_size])
-        #backward_w = tf.get_variable("backward_w", [self.lstm_size, self.lstm_size])
-        #non_linearity_bias = tf.get_variable("non_linearity_b", [self.lstm_size])
-
-        outputs_bidi = [tf.concat(1, [o1, o2]) for o1, o2 in zip(outputs, reversed(outputs_rev))]
-
-        #output = tf.tanh(tf.matmul(outputs_forward, forward_w) + tf.matmul(outputs_backward, backward_w) + non_linearity_bias)
-        output = tf.reshape(tf.concat(1, outputs_bidi), [-1, 2 * self.lstm_size],
-                            name="reshape-outputs_bidi")
-        output_dropped = tf.nn.dropout(output, self.dropout_prob[1])
-
-        # We are computing only the logits, not the actual softmax -- while
-        # computing the loss, it is done by the sequence_loss_by_example and
-        # during the runtime classification, the argmax over logits is enough.
-
-        softmax_w = tf.get_variable("softmax_w", [2 * self.lstm_size, len(tagset)])
-        logits_flatten = tf.nn.xw_plus_b(
-            output_dropped,
-            softmax_w,
-            tf.get_variable("softmax_b", [len(tagset)]))
-        #tf.get_variable_scope().reuse_variables()
-        regularize.append(softmax_w)
-
-        self.logits = tf.reshape(logits_flatten, [-1, num_steps, len(tagset)], name="reshape-logits")
-        estimated_tags_flat = tf.to_int32(tf.argmax(logits_flatten, dimension=1))
-        self.last_state = last_state
+        self.tagging_lstm = BidirectionalLSTM(
+            self.lstm_size,
+            input_list_dropped,
+            self.num_steps,
+            self.forward_initial_state,
+            self.backward_initial_state,
+            self.sentence_lengths,
+            self.dropout_prob[1],
+            len(self.tagset))
+        
 
         # output maks: compute loss only if it insn't a padded word (i.e. zero index)
         output_mask = tf.reshape(tf.to_float(tf.not_equal(self.tags, 0)), [-1])
-
         gt_tags_flat = tf.reshape(self.tags, [-1])
+
         tagging_loss = seq2seq.sequence_loss_by_example(
-            logits=[logits_flatten],
+            logits=[self.tagging_lstm.logits_flat],
             targets=[gt_tags_flat],
             weights=[output_mask])
 
         tagging_accuracy = \
-            tf.reduce_sum(tf.to_float(tf.equal(estimated_tags_flat, gt_tags_flat)) * output_mask) \
+            tf.reduce_sum(tf.to_float(tf.equal(self.tagging_lstm.argmax, gt_tags_flat)) * output_mask) \
                 / tf.reduce_sum(output_mask)
         tf.scalar_summary('train_accuracy', tagging_accuracy, collections=["train"])
         tf.scalar_summary('dev_accuracy', tagging_accuracy, collections=["dev"])
@@ -211,7 +309,7 @@ class Tagger(object):
         if generate_lemmas:
             with tf.variable_scope('decoder'):
                 self.lemma_chars = tf.placeholder(tf.int32, [None, num_steps, num_chars + 2],
-                                                  name='lemma_chars')
+                                                  name='lemma_chars') 
 
                 lemma_state_size = self.lstm_size
 
@@ -230,7 +328,7 @@ class Tagger(object):
                 if supply_form_characters_to_lemma:
                     char_inputs_zeros = \
                         [tf.squeeze(chars, [1]) for chars in
-                            tf.split(1, num_chars, tf.reshape(self.chars, [-1, num_chars],
+                            tf.split(1, num_chars, tf.reshape(self.char_encoder.chars, [-1, num_chars],
                                                               name="reshape-char_inputs_zeros"))]
                     char_inputs_zeros.append(char_inputs_zeros[0] * 0)
 
@@ -275,9 +373,9 @@ class Tagger(object):
 
 
                 if use_attention:
-                    lemma_outputs_train, _ = seq2seq.attention_decoder(embedded_lemma_characters, output_dropped, reshaped_ce_lookup, decoder_cell, loop_function=lf)
+                    lemma_outputs_train, _ = seq2seq.attention_decoder(embedded_lemma_characters, self.tagging_lstm.lstm_output, self.char_encoder.lookup_reshaped, decoder_cell, loop_function=lf)
                 else:
-                    lemma_outputs_train, _ = seq2seq.rnn_decoder(embedded_lemma_characters, output_dropped, decoder_cell, loop_function=lf)
+                    lemma_outputs_train, _ = seq2seq.rnn_decoder(embedded_lemma_characters, self.tagging_lstm.lstm_output, decoder_cell, loop_function=lf)
 
 
                 tf.get_variable_scope().reuse_variables()
@@ -287,11 +385,11 @@ class Tagger(object):
 
                 if use_attention:
                     lemma_outputs_runtime, _ = \
-                        seq2seq.attention_decoder(embedded_lemma_characters, output_dropped, reshaped_ce_lookup, decoder_cell,
+                        seq2seq.attention_decoder(embedded_lemma_characters, self.tagging_lstm.lstm_output, self.char_encoder.lookup_reshaped, decoder_cell,
                             loop_function=loop)
                 else:
                     lemma_outputs_runtime, _ = \
-                        seq2seq.rnn_decoder(embedded_lemma_characters, output_dropped, decoder_cell,
+                        seq2seq.rnn_decoder(embedded_lemma_characters, self.tagging_lstm.lstm_output, decoder_cell,
                             loop_function=loop)
 
                 lemma_char_logits_train = \
@@ -369,8 +467,8 @@ class Tagger(object):
         }
         if self.word_embedding_size: fd[self.words] = words
         if self.char_embedding_size:
-            fd[self.chars] = chars
-            fd[self.chars_lengths] = chars_lengths
+            fd[self.char_encoder.chars] = chars
+            fd[self.char_encoder.word_lengths] = chars_lengths
         if self.generate_lemmas: fd[self.lemma_chars] = lemma_chars
 
         _, cost, summary_str = \
@@ -395,16 +493,16 @@ class Tagger(object):
         }
         if self.word_embedding_size: fd[self.words] = words
         if self.char_embedding_size:
-            fd[self.chars] = chars
-            fd[self.chars_lengths] = chars_lengths
+            fd[self.char_encoder.chars] = chars
+            fd[self.char_encoder.word_lengths] = chars_lengths
         if self.generate_lemmas: fd[self.lemma_chars] = lemma_chars
 
         if self.generate_lemmas:
             logits, lemmas, summary_str = \
-                    self.session.run([self.logits, self.lemmas_decoded, self.summary_dev], feed_dict=fd)
+                    self.session.run([self.tagging_lstm.logits, self.lemmas_decoded, self.summary_dev], feed_dict=fd)
         else:
             logits, summary_str = \
-                    self.session.run([self.logits, self.summary_dev], feed_dict=fd)
+                    self.session.run([self.tagging_lstm.logits, self.summary_dev], feed_dict=fd)
             lemmas = None
         if out_summaries:
             self.summary_writer.add_summary(summary_str, self.steps)
@@ -423,7 +521,9 @@ class Tagger(object):
             for i, w_id in enumerate(words[start:start+self.num_steps]):
                 w[0, i] = w_id
             c = np.zeros((1, self.num_steps, self.num_chars), dtype='int32')
+            lens = np.zeros((1, self.num_steps), dtype='int32')
             for i, chared_word in enumerate(chars[start:start+self.num_steps]):
+                lens[0,i] = len(chared_word[:self.num_chars])
                 for j, c_id in enumerate(chared_word[:self.num_chars]):
                     c[0, i, j] = c_id
 
@@ -434,9 +534,11 @@ class Tagger(object):
                 self.backward_initial_state: backward_initial_state
             }
             if self.word_embedding_size: fd[self.words] = w
-            if self.char_embedding_size: fd[self.chars] = c
+            if self.char_embedding_size:
+                fd[self.char_encoder.chars] = c
+                fd[self.char_encoder.word_lengths] = lens
 
-            logits, state = self.session.run([self.logits, self.last_state], feed_dict=fd)
+            logits, state = self.session.run([self.tagging_lstm.logits, self.last_state], feed_dict=fd)
 
             initial_state = state
             tags.extend(np.argmax(logits[0], axis=1))
