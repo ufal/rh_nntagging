@@ -544,3 +544,19 @@ class Tagger(object):
             tags.extend(np.argmax(logits[0], axis=1))
 
         return [int(x) for x in tags[:len(words)]]
+
+def tagger_from_args(vocab, tags, alphabet, args):
+    return Tagger(vocab, tags, alphabet,
+                    word_embedding_size=args.word_embedding_size,
+                    char_embedding_size=args.char_embedding_size,
+                    num_chars=args.max_word_length,
+                    num_steps=args.max_sentence_length,
+                    optimizer_desc=args.optimizer,
+                    generate_lemmas=args.generate_lemmas,
+                    l2=args.l2,
+                    dropout_prob_values=[float(x) for x in args.dropout.split(",")],
+                    experiment_name=args.exp_name,
+                    supply_form_characters_to_lemma=args.supply_form_characters_to_lemma,
+                    threads=args.threads,
+                    use_attention=args.use_attention,
+                    scheduled_sampling=args.scheduled_sampling)

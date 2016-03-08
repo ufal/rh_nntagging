@@ -3,11 +3,12 @@ import random
 import os
 import Levenshtein
 import logging
+import cPickle as pickle
 
 import numpy as np
 import tensorflow as tf
 import conllu
-from tagger import Tagger
+from tagger import tagger_from_args
 from tagging_dataset import TaggingDataset
 
 
@@ -214,21 +215,7 @@ def main(args):
     dev_data = TaggingDataset.load_from_file(None, vocab=train_data.vocab,
                                              alphabet=train_data.alphabet, tags=train_data.tags)
     logging.debug('Initializing model.')
-    tagger = Tagger(train_data.vocab, train_data.tags, train_data.alphabet,
-                    word_embedding_size=args.word_embedding_size,
-                    char_embedding_size=args.char_embedding_size,
-                    num_chars=args.max_word_length,
-                    num_steps=args.max_sentence_length,
-                    optimizer_desc=args.optimizer,
-                    generate_lemmas=args.generate_lemmas,
-                    l2=args.l2,
-                    dropout_prob_values=[float(x) for x in args.dropout.split(",")],
-                    experiment_name=args.exp_name,
-                    supply_form_characters_to_lemma=args.supply_form_characters_to_lemma,
-                    threads=args.threads,
-                    use_attention=args.use_attention,
-                    scheduled_sampling=args.scheduled_sampling)
-
+    tagger = tagger_from_args(train_data.vocab, train_data.tags, train_data.alphabet, args)
     batches_train = train_data.prepare_batches(
         args.batch_size, args.max_sentence_length, args.max_word_length)
     batches_dev = dev_data.prepare_batches(
@@ -268,6 +255,10 @@ def main(args):
         logging.debug("Ctrl+C recieved, stopping training.")
 
     run_tagger_and_writeout(tagger, dev_data)
+    if args.save:
+        f_save = open(args.save, mode='wb')
+        pickle.dump((args, train_data.vocab, train_data.tags, train_data.alphabet, args.save+".params"), f_save)
+        f_save.close()
 
 
 def run_tagger_and_writeout(tagger, dev_data):
@@ -330,6 +321,8 @@ if __name__ == '__main__':
                         help='Use attention decoder')
     parser.add_argument('--scheduled-sampling', default=None, type=float,
                         help='Scheduled sampling parameter')
+    parser.add_argument('--save', default=None, type=str,
+                        help="File where the model will be stored to.")
 
     args = parser.parse_args()
 
