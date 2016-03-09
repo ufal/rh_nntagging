@@ -449,6 +449,7 @@ class Tagger(object):
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
             self.summary_writer = tf.train.SummaryWriter("logs/"+timestamp+"_"+experiment_name)
 
+        self.saver = tf.train.Saver(tf.trainable_variables())
         self.steps = 0
 
 
@@ -544,6 +545,7 @@ class Tagger(object):
             tags.extend(np.argmax(logits[0], axis=1))
 
         return [int(x) for x in tags[:len(words)]]
+
 
 def tagger_from_args(vocab, tags, alphabet, args):
     return Tagger(vocab, tags, alphabet,

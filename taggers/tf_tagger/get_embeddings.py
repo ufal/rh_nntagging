@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import argparse, sys
+import argparse, sys, os
 import tensorflow as tf
 import cPickle as pickle
 
@@ -15,9 +15,9 @@ if __name__ == "__main__":
 
     batch_size = 256
 
-    args, vocab, tags, alphabet, params_file = \
+    arguments, vocab, tags, alphabet, params_file = \
         pickle.load(args.tf_model)
-    tagger = tagger_from_args(vocab, tags, alphabet, args)
+    tagger = tagger_from_args(vocab, tags, alphabet, arguments)
 
     graph = tf.get_default_graph()
 
@@ -26,7 +26,7 @@ if __name__ == "__main__":
     sess.run(init)
     print "Variables initialized."
 
-    # TODO load the parameters
+    tagger.saver.restore(sess, os.path.join(os.path.dirname(args.tf_model.name), params_file))
 
     words = []
 

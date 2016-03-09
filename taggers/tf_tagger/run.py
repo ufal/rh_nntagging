@@ -256,8 +256,10 @@ def main(args):
 
     run_tagger_and_writeout(tagger, dev_data)
     if args.save:
+        params_file = args.save+".params"
+        tagger.saver.save(tagger.session, params_file)
         f_save = open(args.save, mode='wb')
-        pickle.dump((args, train_data.vocab, train_data.tags, train_data.alphabet, args.save+".params"), f_save)
+        pickle.dump((args, train_data.vocab, train_data.tags, train_data.alphabet, params_file), f_save)
         f_save.close()
 
 
